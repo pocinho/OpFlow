@@ -1,0 +1,24 @@
+<Project>
+    <PropertyGroup>
+        <WarningLevel>9999</WarningLevel>
+        <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    </PropertyGroup>
+
+    <!-- See https://aka.ms/dotnet/msbuild/customize for more details on customizing your build -->
+	<PropertyGroup>
+		<PackageId>PP.Toolkit.Operation</PackageId>
+		<Authors>Paulo Pocinho</Authors>
+		<Company>Paulo Pocinho</Company>
+		<Product>PP.Toolkit.Operation</Product>
+		<Copyright>Copyright (c) 2026 Paulo Pocinho</Copyright>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageProjectUrl>https://github.com/pocinho/PP.Toolkit.Operation</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/pocinho/PP.Toolkit.Operation</RepositoryUrl>
+		<Description>Operation monad.</Description>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<Version>0.0.0.1</Version>
+		<AssemblyVersion>0.0.0.1</AssemblyVersion>
+		<FileVersion>0.0.0.1</FileVersion>
+		<InformationalVersion>0.0.0.1</InformationalVersion>
+	</PropertyGroup>
+</Project>
