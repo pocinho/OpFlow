@@ -1,6 +1,6 @@
 ﻿// Copyright (c) 2026 Paulo Pocinho.
 
-namespace PP.Toolkit.Operation.Tests;
+namespace PP.Toolkit.Operation.Tests.Canon.Guards;
 
 public class ValidateTests
 {

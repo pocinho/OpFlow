@@ -23,11 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Canon\Creation\" />
-    <Folder Include="Canon\Guards\" />
     <Folder Include="Canon\ControlFlow\" />
-    <Folder Include="Canon\SideEffects\" />
-    <Folder Include="Canon\Transform\" />
   </ItemGroup>
 
 </Project>

@@ -44,6 +44,7 @@ public sealed class OperationGenerator : IIncrementalGenerator
                 {
                     IOperationEmitter[] emitters =
                     [
+                        //
                         // Canon:
                         //
                         // Creation:
@@ -62,6 +63,7 @@ public sealed class OperationGenerator : IIncrementalGenerator
                         // Side Effects:
                         new TapEmitter(),
                         new TapErrorEmitter(),
+                        new FinallyEmitter(),
                     ];
 
                     foreach (IOperationEmitter emitter in emitters)
