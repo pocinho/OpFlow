@@ -6,5 +6,6 @@ namespace PP.Toolkit.Operation.Generators.Emission;
 
 internal interface IOperationEmitter
 {
-    string Emit(OperationModel operation);
+    string FileName(OperationModel op);
+    string Emit(OperationModel op);
 }

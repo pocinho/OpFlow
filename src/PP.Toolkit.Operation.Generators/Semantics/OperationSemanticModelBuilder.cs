@@ -12,7 +12,7 @@ internal static class OperationSemanticModelBuilder
     public static OperationModel? TryBuild(IEnumerable<UnionModel> unions)
     {
         // Find the union named "Operation"
-        var opUnion = unions.FirstOrDefault(u => u.Name == "Operation");
+        UnionModel? opUnion = unions.FirstOrDefault(u => u.Name == "Operation");
 
         if (opUnion is null)
             return null; // Operation<T> not present in this compilation
