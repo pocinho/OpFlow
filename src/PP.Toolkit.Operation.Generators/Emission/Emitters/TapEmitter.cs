@@ -61,21 +61,25 @@ internal sealed class TapEmitter : IOperationEmitter
         w.WriteLine("switch (op)");
         w.WriteLine("{");
         w.Indent();
+
         w.WriteLine("case Operation<T>.Success s:");
         w.Indent();
         w.WriteLine("action(s.Result);");
         w.WriteLine("return op;");
         w.Unindent();
         w.WriteLine();
+
         w.WriteLine("case Operation<T>.Failure:");
         w.Indent();
         w.WriteLine("return op;");
         w.Unindent();
         w.WriteLine();
+
         w.WriteLine("default:");
         w.Indent();
         w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
         w.Unindent();
+
         w.Unindent();
         w.WriteLine("}");
         w.Unindent();
@@ -93,21 +97,25 @@ internal sealed class TapEmitter : IOperationEmitter
         w.WriteLine("switch (op)");
         w.WriteLine("{");
         w.Indent();
+
         w.WriteLine("case Operation<T>.Success s:");
         w.Indent();
         w.WriteLine("await action(s.Result).ConfigureAwait(false);");
         w.WriteLine("return op;");
         w.Unindent();
         w.WriteLine();
+
         w.WriteLine("case Operation<T>.Failure:");
         w.Indent();
         w.WriteLine("return op;");
         w.Unindent();
         w.WriteLine();
+
         w.WriteLine("default:");
         w.Indent();
         w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
         w.Unindent();
+
         w.Unindent();
         w.WriteLine("}");
         w.Unindent();
@@ -115,7 +123,7 @@ internal sealed class TapEmitter : IOperationEmitter
     }
 
     // ---------------------------------------------------------------------
-    // TapAsync<T>(Task)
+    // TapAsync<T>(Func<Task>)
     // ---------------------------------------------------------------------
     private static void EmitTapAsyncTask(CodeWriter w)
     {
@@ -125,25 +133,28 @@ internal sealed class TapEmitter : IOperationEmitter
         w.WriteLine("switch (op)");
         w.WriteLine("{");
         w.Indent();
+
         w.WriteLine("case Operation<T>.Success:");
         w.Indent();
         w.WriteLine("await task().ConfigureAwait(false);");
         w.WriteLine("return op;");
         w.Unindent();
         w.WriteLine();
+
         w.WriteLine("case Operation<T>.Failure:");
         w.Indent();
         w.WriteLine("return op;");
         w.Unindent();
         w.WriteLine();
+
         w.WriteLine("default:");
         w.Indent();
         w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
         w.Unindent();
+
         w.Unindent();
         w.WriteLine("}");
         w.Unindent();
         w.WriteLine("}");
     }
-
 }
