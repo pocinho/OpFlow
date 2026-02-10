@@ -10,7 +10,7 @@ internal sealed class BindEmitter : IOperationEmitter
 
     public string Emit(OperationModel op)
     {
-        var w = new CodeWriter();
+        CodeWriter w = new CodeWriter();
 
         EmitHeader(w);
         EmitNamespace(w, op);

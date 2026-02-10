@@ -43,7 +43,7 @@ public sealed class OperationGenerator : IIncrementalGenerator
                 if (isOperation)
                 {
                     IOperationEmitter[] emitters =
-                    {
+                    [
                         // Canon:
                         //
                         // Creation:
@@ -59,7 +59,9 @@ public sealed class OperationGenerator : IIncrementalGenerator
                         new EnsureEmitter(),
                         new ValidateEmitter(),
                         new RecoverEmitter(),
-                    };
+                        // Side Effects:
+                        new TapEmitter(),
+                    ];
 
                     foreach (IOperationEmitter emitter in emitters)
                     {
