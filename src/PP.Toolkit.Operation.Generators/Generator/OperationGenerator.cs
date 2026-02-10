@@ -55,6 +55,8 @@ public sealed class OperationGenerator : IIncrementalGenerator
                         new BindEmitter(),
                         new MapErrorEmitter(),
                         new BindErrorEmitter(),
+                        // Guards:
+                        new EnsureEmitter(),
                     };
 
                     foreach (IOperationEmitter emitter in emitters)
