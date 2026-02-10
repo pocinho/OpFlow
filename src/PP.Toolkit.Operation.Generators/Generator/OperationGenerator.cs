@@ -66,6 +66,7 @@ public sealed class OperationGenerator : IIncrementalGenerator
                         // Control Flow:
                         new IfSuccessEmitter(),
                         new IfFailureEmitter(),
+                        new MatchEmitter(),
                     ];
 
                     foreach (IOperationEmitter emitter in emitters)
