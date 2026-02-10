@@ -67,6 +67,7 @@ public sealed class OperationGenerator : IIncrementalGenerator
                         new IfSuccessEmitter(),
                         new IfFailureEmitter(),
                         new MatchEmitter(),
+                        new SwitchEmitter(),
                     ];
 
                     foreach (IOperationEmitter emitter in emitters)
