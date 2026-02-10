@@ -10,8 +10,8 @@ public class FailTests
     [Fact]
     public void Fail_Error_ReturnsFailure()
     {
-        var error = new Error.Unexpected("boom");
-        var op = Operation.Fail<int>(error);
+        Error.Unexpected error = new Error.Unexpected("boom");
+        Operation<int> op = Operation.Fail<int>(error);
 
         Assert.IsType<Operation<int>.Failure>(op);
         Assert.Equal("boom", ((Operation<int>.Failure)op).Error.Message);
@@ -23,7 +23,7 @@ public class FailTests
     [Fact]
     public void Fail_Message_ReturnsUnexpectedError()
     {
-        var op = Operation.Fail<int>("oops");
+        Operation<int> op = Operation.Fail<int>("oops");
 
         Assert.IsType<Operation<int>.Failure>(op);
         Assert.Equal("oops", ((Operation<int>.Failure)op).Error.Message);
@@ -36,11 +36,11 @@ public class FailTests
     [Fact]
     public void Fail_Validation_ReturnsValidationError()
     {
-        var op = Operation.Fail<int>("invalid", "Email", "Password");
+        Operation<int> op = Operation.Fail<int>("invalid", "Email", "Password");
 
         Assert.IsType<Operation<int>.Failure>(op);
 
-        var error = ((Operation<int>.Failure)op).Error;
+        Error error = ((Operation<int>.Failure)op).Error;
         Assert.IsType<Error.Validation>(error);
 
         Assert.Equal("invalid", error.Message);
@@ -53,12 +53,12 @@ public class FailTests
     [Fact]
     public void Fail_Exception_ReturnsUnexpectedError()
     {
-        var ex = new InvalidOperationException("bad");
-        var op = Operation.Fail<int>(ex);
+        InvalidOperationException ex = new InvalidOperationException("bad");
+        Operation<int> op = Operation.Fail<int>(ex);
 
         Assert.IsType<Operation<int>.Failure>(op);
 
-        var error = ((Operation<int>.Failure)op).Error;
+        Error error = ((Operation<int>.Failure)op).Error;
         Assert.IsType<Error.Unexpected>(error);
 
         Assert.Equal("bad", error.Message);

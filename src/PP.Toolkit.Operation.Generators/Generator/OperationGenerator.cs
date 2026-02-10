@@ -51,6 +51,7 @@ public sealed class OperationGenerator : IIncrementalGenerator
                         new TryEmitter(),
                         // Transformation:
                         new BindEmitter(),
+                        new BindErrorEmitter(),
                     };
 
                     foreach (IOperationEmitter emitter in emitters)

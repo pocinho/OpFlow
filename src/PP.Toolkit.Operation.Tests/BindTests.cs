@@ -10,9 +10,9 @@ public class BindTests
     [Fact]
     public void Bind_Success_InvokesBinder()
     {
-        var op = Operation.Success(10);
+        Operation<int> op = Operation.Success(10);
 
-        var result = op.Bind(x => Operation.Success(x * 2));
+        Operation<int> result = op.Bind(x => Operation.Success(x * 2));
 
         Assert.IsType<Operation<int>.Success>(result);
         Assert.Equal(20, ((Operation<int>.Success)result).Result);
@@ -21,10 +21,10 @@ public class BindTests
     [Fact]
     public void Bind_Failure_ShortCircuits()
     {
-        var error = new Error.Unexpected("boom");
-        var op = Operation.FailureOf<int>(error);
+        Error.Unexpected error = new Error.Unexpected("boom");
+        Operation<int> op = Operation.FailureOf<int>(error);
 
-        var result = op.Bind(x => Operation.Success(x * 2));
+        Operation<int> result = op.Bind(x => Operation.Success(x * 2));
 
         Assert.IsType<Operation<int>.Failure>(result);
         Assert.Equal(error, ((Operation<int>.Failure)result).Error);
@@ -33,9 +33,11 @@ public class BindTests
     [Fact]
     public void Bind_BinderReturnsFailure()
     {
-        var op = Operation.Success(5);
+        Operation<int> op = Operation.Success(5);
 
-        var result = op.Bind<int, int>(x => Operation.FailureOf<int>(new Error.Unexpected("fail")));
+        Operation<int> result = op.Bind<int, int>(x =>
+            Operation.FailureOf<int>(new Error.Unexpected("fail"))
+        );
 
         Assert.IsType<Operation<int>.Failure>(result);
         Assert.Equal("fail", ((Operation<int>.Failure)result).Error.Message);
@@ -47,9 +49,9 @@ public class BindTests
     [Fact]
     public async Task BindAsync_AsyncBinder_ReturnsSuccess()
     {
-        var op = Operation.Success("hello");
+        Operation<string> op = Operation.Success("hello");
 
-        var result = await op.BindAsync(async s =>
+        Operation<int> result = await op.BindAsync(async s =>
         {
             await Task.Delay(10);
             return Operation.Success(s.Length);
@@ -60,27 +62,28 @@ public class BindTests
     }
 
     [Fact]
-    public async Task BindAsync_AsyncBinder_Throws_ReturnsFailure()
+    public async Task BindAsync_AsyncBinder_Throws_PropagatesException()
     {
-        var op = Operation.Success(1);
+        Operation<int> op = Operation.Success(1);
 
-        var result = await op.BindAsync<int, int>(async _ =>
-        {
-            await Task.Delay(10);
-            throw new Exception("async fail");
-        });
-
-        Assert.IsType<Operation<int>.Failure>(result);
-        Assert.Equal("async fail", ((Operation<int>.Failure)result).Error.Message);
+        await Assert.ThrowsAsync<Exception>(() =>
+            op.BindAsync<int, int>(async _ =>
+            {
+                await Task.Delay(10);
+                throw new Exception("async fail");
+            })
+        );
     }
 
     [Fact]
     public async Task BindAsync_Failure_ShortCircuits()
     {
-        var error = new Error.Unexpected("boom");
-        var op = Operation.FailureOf<int>(error);
+        Error.Unexpected error = new Error.Unexpected("boom");
+        Operation<int> op = Operation.FailureOf<int>(error);
 
-        var result = await op.BindAsync(x => Task.FromResult(Operation.Success(x * 2)));
+        Operation<int> result = await op.BindAsync(x =>
+            Task.FromResult(Operation.Success(x * 2))
+        );
 
         Assert.IsType<Operation<int>.Failure>(result);
         Assert.Equal(error, ((Operation<int>.Failure)result).Error);
@@ -92,24 +95,39 @@ public class BindTests
     [Fact]
     public async Task BindAsync_Task_ReturnsSuccess()
     {
-        var op = Operation.Success(3);
+        Operation<int> op = Operation.Success(3);
 
-        var result = await op.BindAsync(Task.FromResult(Operation.Success(9)));
+        Operation<int> result = await op.BindAsync(
+            Task.FromResult(Operation.Success(9))
+        );
 
         Assert.IsType<Operation<int>.Success>(result);
         Assert.Equal(9, ((Operation<int>.Success)result).Result);
     }
 
     [Fact]
+    public async Task BindAsync_Task_Throws_PropagatesException()
+    {
+        Operation<int> op = Operation.Success(3);
+
+        Task<Operation<int>> failingTask =
+            Task.FromException<Operation<int>>(new Exception("task fail"));
+
+        await Assert.ThrowsAsync<Exception>(() =>
+            op.BindAsync(failingTask)
+        );
+    }
+
+    [Fact]
     public async Task BindAsync_Task_Failure_ReturnsFailure()
     {
-        var op = Operation.Success(3);
+        Operation<int> op = Operation.Success(3);
 
-        var failingTask = Task.FromResult<Operation<int>>(
+        Task<Operation<int>> failingTask = Task.FromResult(
             Operation.FailureOf<int>(new Error.Unexpected("task fail"))
         );
 
-        var result = await op.BindAsync(failingTask);
+        Operation<int> result = await op.BindAsync(failingTask);
 
         Assert.IsType<Operation<int>.Failure>(result);
         Assert.Equal("task fail", ((Operation<int>.Failure)result).Error.Message);
@@ -118,22 +136,14 @@ public class BindTests
     [Fact]
     public async Task BindAsync_Task_Failure_ShortCircuits()
     {
-        var error = new Error.Unexpected("boom");
-        var op = Operation.FailureOf<int>(error);
+        Error.Unexpected error = new Error.Unexpected("boom");
+        Operation<int> op = Operation.FailureOf<int>(error);
 
-        var result = await op.BindAsync(Task.FromResult(Operation.Success(99)));
+        Operation<int> result = await op.BindAsync(
+            Task.FromResult(Operation.Success(99))
+        );
 
         Assert.IsType<Operation<int>.Failure>(result);
         Assert.Equal(error, ((Operation<int>.Failure)result).Error);
-    }
-
-    [Fact]
-    public async Task BindAsync_Task_Throws_PropagatesException()
-    {
-        var op = Operation.Success(3);
-
-        var failingTask = Task.FromException<Operation<int>>(new Exception("boom"));
-
-        await Assert.ThrowsAsync<Exception>(() => op.BindAsync(failingTask));
     }
 }
