@@ -42,7 +42,7 @@ internal sealed class FromEmitter : IOperationEmitter
 
         EmitSuccess(w);
         w.WriteLine();
-        EmitFailure(w);
+        EmitFailureOf(w);
         w.WriteLine();
         EmitFromValue(w);
         w.WriteLine();
@@ -50,9 +50,9 @@ internal sealed class FromEmitter : IOperationEmitter
         w.WriteLine();
         EmitFromFunc(w);
         w.WriteLine();
-        EmitFromFuncTask(w);
+        EmitFromFuncAsync(w);
         w.WriteLine();
-        EmitFromTask(w);
+        EmitFromTaskAsync(w);
         w.WriteLine();
         EmitFromException(w);
         w.WriteLine();
@@ -62,30 +62,45 @@ internal sealed class FromEmitter : IOperationEmitter
         w.WriteLine("}");
     }
 
+    // ---------------------------------------------------------------------
+    // Success<T>
+    // ---------------------------------------------------------------------
     private static void EmitSuccess(CodeWriter w)
     {
         w.WriteLine("public static Operation<T> Success<T>(T value)");
         w.WriteLine("    => new Operation<T>.Success(value);");
     }
 
-    private static void EmitFailure(CodeWriter w)
+    // ---------------------------------------------------------------------
+    // FailureOf<T>  (renamed to avoid conflict with nested record type)
+    // ---------------------------------------------------------------------
+    private static void EmitFailureOf(CodeWriter w)
     {
-        w.WriteLine("public static Operation<T> Failure<T>(Error error)");
+        w.WriteLine("public static Operation<T> FailureOf<T>(Error error)");
         w.WriteLine("    => new Operation<T>.Failure(error);");
     }
 
+    // ---------------------------------------------------------------------
+    // FromValue<T>
+    // ---------------------------------------------------------------------
     private static void EmitFromValue(CodeWriter w)
     {
         w.WriteLine("public static Operation<T> FromValue<T>(T value)");
         w.WriteLine("    => Success(value);");
     }
 
+    // ---------------------------------------------------------------------
+    // FromError<T>
+    // ---------------------------------------------------------------------
     private static void EmitFromError(CodeWriter w)
     {
         w.WriteLine("public static Operation<T> FromError<T>(Error error)");
-        w.WriteLine("    => Failure(error);");
+        w.WriteLine("    => FailureOf<T>(error);");
     }
 
+    // ---------------------------------------------------------------------
+    // From(Func<T>)
+    // ---------------------------------------------------------------------
     private static void EmitFromFunc(CodeWriter w)
     {
         w.WriteLine("public static Operation<T> From<T>(Func<T> func)");
@@ -100,16 +115,19 @@ internal sealed class FromEmitter : IOperationEmitter
         w.WriteLine("catch (Exception ex)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("return Failure<T>(new Error.Unexpected(ex.Message, ex));");
+        w.WriteLine("return FailureOf<T>(new Error.Unexpected(ex.Message, ex));");
         w.Unindent();
         w.WriteLine("}");
         w.Unindent();
         w.WriteLine("}");
     }
 
-    private static void EmitFromFuncTask(CodeWriter w)
+    // ---------------------------------------------------------------------
+    // FromAsync(Func<Task<T>>)
+    // ---------------------------------------------------------------------
+    private static void EmitFromFuncAsync(CodeWriter w)
     {
-        w.WriteLine("public static async Task<Operation<T>> From<T>(Func<Task<T>> func)");
+        w.WriteLine("public static async Task<Operation<T>> FromAsync<T>(Func<Task<T>> func)");
         w.WriteLine("{");
         w.Indent();
         w.WriteLine("try");
@@ -121,16 +139,19 @@ internal sealed class FromEmitter : IOperationEmitter
         w.WriteLine("catch (Exception ex)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("return Failure<T>(new Error.Unexpected(ex.Message, ex));");
+        w.WriteLine("return FailureOf<T>(new Error.Unexpected(ex.Message, ex));");
         w.Unindent();
         w.WriteLine("}");
         w.Unindent();
         w.WriteLine("}");
     }
 
-    private static void EmitFromTask(CodeWriter w)
+    // ---------------------------------------------------------------------
+    // FromAsync(Task<T>)
+    // ---------------------------------------------------------------------
+    private static void EmitFromTaskAsync(CodeWriter w)
     {
-        w.WriteLine("public static async Task<Operation<T>> From<T>(Task<T> task)");
+        w.WriteLine("public static async Task<Operation<T>> FromAsync<T>(Task<T> task)");
         w.WriteLine("{");
         w.Indent();
         w.WriteLine("try");
@@ -142,19 +163,25 @@ internal sealed class FromEmitter : IOperationEmitter
         w.WriteLine("catch (Exception ex)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("return Failure<T>(new Error.Unexpected(ex.Message, ex));");
+        w.WriteLine("return FailureOf<T>(new Error.Unexpected(ex.Message, ex));");
         w.Unindent();
         w.WriteLine("}");
         w.Unindent();
         w.WriteLine("}");
     }
 
+    // ---------------------------------------------------------------------
+    // FromException<T>
+    // ---------------------------------------------------------------------
     private static void EmitFromException(CodeWriter w)
     {
         w.WriteLine("public static Operation<T> FromException<T>(Exception ex)");
-        w.WriteLine("    => Failure<T>(new Error.Unexpected(ex.Message, ex));");
+        w.WriteLine("    => FailureOf<T>(new Error.Unexpected(ex.Message, ex));");
     }
 
+    // ---------------------------------------------------------------------
+    // FromNullable<T>
+    // ---------------------------------------------------------------------
     private static void EmitFromNullable(CodeWriter w)
     {
         w.WriteLine("public static Operation<T> FromNullable<T>(T? value, string? message = null)");
@@ -164,7 +191,7 @@ internal sealed class FromEmitter : IOperationEmitter
         w.WriteLine("return value is not null");
         w.Indent();
         w.WriteLine("? Success(value)");
-        w.WriteLine(": Failure<T>(new Error.Unexpected(message ?? $\"Value of type {typeof(T).Name} was null.\"));");
+        w.WriteLine(": FailureOf<T>(new Error.Unexpected(message ?? $\"Value of type {typeof(T).Name} was null.\"));");
         w.Unindent();
         w.Unindent();
         w.WriteLine("}");
