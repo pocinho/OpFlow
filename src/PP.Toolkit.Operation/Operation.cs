@@ -7,8 +7,11 @@ namespace PP.Toolkit.Operation;
 [Union]
 public abstract partial record Operation<T>
 {
-    [UnionCase] public sealed partial record Success(T Result) : Operation<T>;
-    [UnionCase] public sealed partial record Failure(Error Error, T? Result = default) : Operation<T>;
+    [UnionCase]
+    public sealed partial record Success(T Result) : Operation<T>;
+
+    [UnionCase]
+    public sealed partial record Failure(Error Error) : Operation<T>;
 
     // Implicit: T → Success(T)
     public static implicit operator Operation<T>(T value)
@@ -24,8 +27,8 @@ public static class Operation
     public static Operation<T> Ok<T>(T value)
         => new Operation<T>.Success(value);
 
-    public static Operation<T> Fail<T>(Error error, T? result = default)
-        => new Operation<T>.Failure(error, result);
+    public static Operation<T> Fail<T>(Error error)
+        => new Operation<T>.Failure(error);
 
     public static Operation<T> Validation<T>(string message, params string[] fields)
         => Fail<T>(new Error.Validation(message, fields));
