@@ -61,6 +61,7 @@ public sealed class OperationGenerator : IIncrementalGenerator
                         new RecoverEmitter(),
                         // Side Effects:
                         new TapEmitter(),
+                        new TapErrorEmitter(),
                     ];
 
                     foreach (IOperationEmitter emitter in emitters)
