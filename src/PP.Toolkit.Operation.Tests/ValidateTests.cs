@@ -12,7 +12,7 @@ public class ValidateTests
     {
         Operation<int> op = Operation.Success(10);
 
-        var result = op.Validate(x => x > 5, "should not fail");
+        Operation<int> result = op.Validate(x => x > 5, "should not fail");
 
         Assert.IsType<Operation<int>.Success>(result);
         Assert.Equal(10, ((Operation<int>.Success)result).Result);
@@ -23,7 +23,7 @@ public class ValidateTests
     {
         Operation<int> op = Operation.Success(3);
 
-        var result = op.Validate(x => x > 5, "too small");
+        Operation<int> result = op.Validate(x => x > 5, "too small");
 
         Assert.IsType<Operation<int>.Failure>(result);
         Assert.Equal("too small", ((Operation<int>.Failure)result).Error.Message);
@@ -35,7 +35,7 @@ public class ValidateTests
         Error.Unexpected error = new Error.Unexpected("boom");
         Operation<int> op = Operation.FailureOf<int>(error);
 
-        var result = op.Validate(x => x > 0, "ignored");
+        Operation<int> result = op.Validate(x => x > 0, "ignored");
 
         Assert.IsType<Operation<int>.Failure>(result);
         Assert.Equal(error, ((Operation<int>.Failure)result).Error);
@@ -50,7 +50,7 @@ public class ValidateTests
         Operation<int> op = Operation.Success(2);
         Error.Validation custom = new Error.Validation("bad value");
 
-        var result = op.Validate(x => x > 5, custom);
+        Operation<int> result = op.Validate(x => x > 5, custom);
 
         Assert.IsType<Operation<int>.Failure>(result);
         Assert.Equal("bad value", ((Operation<int>.Failure)result).Error.Message);
@@ -64,7 +64,7 @@ public class ValidateTests
     {
         Operation<int> op = Operation.Success(10);
 
-        var result = await op.ValidateAsync(async x =>
+        Operation<int> result = await op.ValidateAsync(async x =>
         {
             await Task.Delay(10);
             return x > 5;
@@ -79,7 +79,7 @@ public class ValidateTests
     {
         Operation<int> op = Operation.Success(3);
 
-        var result = await op.ValidateAsync(async x =>
+        Operation<int> result = await op.ValidateAsync(async x =>
         {
             await Task.Delay(10);
             return x > 5;
@@ -109,7 +109,7 @@ public class ValidateTests
         Error.Unexpected error = new Error.Unexpected("boom");
         Operation<int> op = Operation.FailureOf<int>(error);
 
-        var result = await op.ValidateAsync(x =>
+        Operation<int> result = await op.ValidateAsync(x =>
             Task.FromResult(true), "ignored");
 
         Assert.IsType<Operation<int>.Failure>(result);
@@ -125,7 +125,7 @@ public class ValidateTests
         Operation<int> op = Operation.Success(2);
         Error.Validation custom = new Error.Validation("bad value");
 
-        var result = await op.ValidateAsync(async x =>
+        Operation<int> result = await op.ValidateAsync(async x =>
         {
             await Task.Delay(10);
             return x > 5;

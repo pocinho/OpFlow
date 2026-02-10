@@ -58,6 +58,7 @@ public sealed class OperationGenerator : IIncrementalGenerator
                         // Guards:
                         new EnsureEmitter(),
                         new ValidateEmitter(),
+                        new RecoverEmitter(),
                     };
 
                     foreach (IOperationEmitter emitter in emitters)
