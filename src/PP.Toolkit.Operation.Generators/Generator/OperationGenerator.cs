@@ -44,8 +44,13 @@ public sealed class OperationGenerator : IIncrementalGenerator
                 {
                     IOperationEmitter[] emitters =
                     {
+                        // Canonical emitters:
+                        // Creation:
                         new FromEmitter(),
-                        new FailEmitter()
+                        new FailEmitter(),
+                        new TryEmitter(),
+                        // Transformation:
+                        new BindEmitter(),
                     };
 
                     foreach (IOperationEmitter emitter in emitters)
