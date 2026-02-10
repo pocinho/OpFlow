@@ -44,30 +44,30 @@ public sealed class OperationGenerator : IIncrementalGenerator
                 {
                     IOperationEmitter[] emitters =
                     [
-                        // Canon:
-                        //
-                        // Creation:
+                        // Base Canon
+                        // - Creation:
                         new FromEmitter(),
                         new FailEmitter(),
                         new TryEmitter(),
-                        // Transform:
+                        // - Transform:
                         new MapEmitter(),
                         new BindEmitter(),
                         new MapErrorEmitter(),
                         new BindErrorEmitter(),
-                        // Guards:
+                        // - Guards:
                         new EnsureEmitter(),
                         new ValidateEmitter(),
                         new RecoverEmitter(),
-                        // Side Effects:
+                        // - Side Effects:
                         new TapEmitter(),
                         new TapErrorEmitter(),
                         new FinallyEmitter(),
-                        // Control Flow:
+                        // - Control Flow:
                         new IfSuccessEmitter(),
                         new IfFailureEmitter(),
                         new MatchEmitter(),
                         new SwitchEmitter(),
+                        new FlattenEmitter(),
                     ];
 
                     foreach (IOperationEmitter emitter in emitters)
