@@ -43,7 +43,7 @@ public class TapTests
 
         Operation<int> result = await op.TapAsync(async x =>
         {
-            await Task.Delay(10);
+            await Task.Delay(1);
             tapped = x;
         });
 
@@ -60,7 +60,7 @@ public class TapTests
         await Assert.ThrowsAsync<Exception>(() =>
             op.TapAsync<int>(async _ =>
             {
-                await Task.Delay(10);
+                await Task.Delay(1);
                 throw new Exception("async fail");
             })
         );

@@ -40,7 +40,7 @@ public class MapTests
 
         Operation<int> result = await op.MapAsync(async s =>
         {
-            await Task.Delay(10);
+            await Task.Delay(1);
             return s.Length;
         });
 
@@ -56,7 +56,7 @@ public class MapTests
         await Assert.ThrowsAsync<Exception>(() =>
             op.MapAsync<int, int>(async _ =>
             {
-                await Task.Delay(10);
+                await Task.Delay(1);
                 throw new Exception("async fail");
             })
         );

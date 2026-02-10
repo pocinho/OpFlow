@@ -66,7 +66,7 @@ public class ValidateTests
 
         Operation<int> result = await op.ValidateAsync(async x =>
         {
-            await Task.Delay(10);
+            await Task.Delay(1);
             return x > 5;
         }, "should not fail");
 
@@ -81,7 +81,7 @@ public class ValidateTests
 
         Operation<int> result = await op.ValidateAsync(async x =>
         {
-            await Task.Delay(10);
+            await Task.Delay(1);
             return x > 5;
         }, "too small");
 
@@ -97,7 +97,7 @@ public class ValidateTests
         await Assert.ThrowsAsync<Exception>(() =>
             op.ValidateAsync<int>(async _ =>
             {
-                await Task.Delay(10);
+                await Task.Delay(1);
                 throw new Exception("async fail");
             }, "ignored")
         );
@@ -127,7 +127,7 @@ public class ValidateTests
 
         Operation<int> result = await op.ValidateAsync(async x =>
         {
-            await Task.Delay(10);
+            await Task.Delay(1);
             return x > 5;
         }, custom);
 

@@ -36,7 +36,7 @@ public class TryTests
     {
         Operation<string> op = await Operation.TryAsync(async () =>
         {
-            await Task.Delay(10);
+            await Task.Delay(1);
             return "ok";
         });
 
@@ -49,7 +49,7 @@ public class TryTests
     {
         Operation<int> op = await Operation.TryAsync<int>(async () =>
         {
-            await Task.Delay(10);
+            await Task.Delay(1);
             throw new Exception("async fail");
         });
 

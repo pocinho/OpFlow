@@ -54,7 +54,7 @@ public class BindErrorTests
 
         Operation<int> result = await op.BindErrorAsync(async err =>
         {
-            await Task.Delay(10);
+            await Task.Delay(1);
             return Operation.Success(123);
         });
 
@@ -70,7 +70,7 @@ public class BindErrorTests
         await Assert.ThrowsAsync<Exception>(() =>
             op.BindErrorAsync<int>(async err =>
             {
-                await Task.Delay(10);
+                await Task.Delay(1);
                 throw new Exception("async fail");
             })
         );

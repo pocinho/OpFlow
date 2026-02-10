@@ -43,7 +43,7 @@ public class MapErrorTests
 
         Operation<int> result = await op.MapErrorAsync(async err =>
         {
-            await Task.Delay(10);
+            await Task.Delay(1);
             return new Error.Unexpected(err.Message + " async");
         });
 
@@ -59,7 +59,7 @@ public class MapErrorTests
         await Assert.ThrowsAsync<Exception>(() =>
             op.MapErrorAsync<int>(async err =>
             {
-                await Task.Delay(10);
+                await Task.Delay(1);
                 throw new Exception("async fail");
             })
         );

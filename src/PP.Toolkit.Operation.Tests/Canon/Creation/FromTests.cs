@@ -83,7 +83,7 @@ public class FromTests
     {
         Operation<int> op = await Operation.FromAsync(async () =>
         {
-            await Task.Delay(10);
+            await Task.Delay(1);
             return 99;
         });
 
@@ -96,7 +96,7 @@ public class FromTests
     {
         Operation<int> op = await Operation.FromAsync<int>(async () =>
         {
-            await Task.Delay(10);
+            await Task.Delay(1);
             throw new Exception("async fail");
         });
 

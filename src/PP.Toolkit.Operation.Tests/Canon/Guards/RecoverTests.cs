@@ -39,7 +39,7 @@ public class RecoverTests
 
         Operation<int> result = await op.RecoverAsync(async err =>
         {
-            await Task.Delay(10);
+            await Task.Delay(1);
             return 123;
         });
 
@@ -55,7 +55,7 @@ public class RecoverTests
         await Assert.ThrowsAsync<Exception>(() =>
             op.RecoverAsync<int>(async err =>
             {
-                await Task.Delay(10);
+                await Task.Delay(1);
                 throw new Exception("async fail");
             })
         );
