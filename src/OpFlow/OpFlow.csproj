@@ -4,14 +4,34 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+
+		<TargetFramework>net10.0</TargetFramework>
+		<PackageId>OpFlow</PackageId>
+		<Authors>Paulo Pocinho</Authors>
+		<Company>Paulo Pocinho</Company>
+		<Product>OpFlow</Product>
+		<Copyright>Copyright (c) 2026 Paulo Pocinho</Copyright>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageProjectUrl>https://github.com/pocinho/OpFlow</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/pocinho/OpFlow</RepositoryUrl>
+		<Description>Functional pipeline and discriminated union framework for C#.</Description>
+		<PackageTags>functional;pipeline;union;monad;validation;result</PackageTags>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<Version>1.0.0.0</Version>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<FileVersion>1.0.0.0</FileVersion>
+		<InformationalVersion>1.0.0.0</InformationalVersion>
+
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+		<IsPackable>true</IsPackable>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\OpFlow.Generators\OpFlow.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
-
-	<Target Name="ListCompileItems" AfterTargets="Build">
-		<Message Importance="High" Text="Compile Item: @(Compile)" />
-	</Target>
 
 </Project>
