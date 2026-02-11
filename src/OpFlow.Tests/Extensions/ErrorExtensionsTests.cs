@@ -13,9 +13,9 @@ public class ErrorExtensionsTests
     [Fact]
     public void AsValidation_ReturnsValidationCase()
     {
-        var err = new Error.Validation("bad");
+        Error.Validation err = new Error.Validation("bad");
 
-        var v = err.AsValidation();
+        Error.Validation? v = err.AsValidation();
 
         Assert.NotNull(v);
         Assert.Equal("bad", v!.Message);
@@ -32,10 +32,10 @@ public class ErrorExtensionsTests
     [Fact]
     public void AsUnexpected_ReturnsUnexpectedCase()
     {
-        var ex = new InvalidOperationException("boom");
-        var err = new Error.Unexpected("fail", ex);
+        InvalidOperationException ex = new InvalidOperationException("boom");
+        Error.Unexpected err = new Error.Unexpected("fail", ex);
 
-        var u = err.AsUnexpected();
+        Error.Unexpected? u = err.AsUnexpected();
 
         Assert.NotNull(u);
         Assert.Equal("fail", u!.Message);
@@ -110,7 +110,7 @@ public class ErrorExtensionsTests
     [Fact]
     public void GetException_ReturnsExceptionForUnexpected()
     {
-        var ex = new InvalidOperationException("boom");
+        InvalidOperationException ex = new InvalidOperationException("boom");
         Error err = new Error.Unexpected("fail", ex);
 
         Assert.Equal(ex, err.GetException());
@@ -133,7 +133,7 @@ public class ErrorExtensionsTests
     {
         Error err = new Error.Validation("bad");
 
-        Assert.True(err.TryGetValidation(out var v));
+        Assert.True(err.TryGetValidation(out Error.Validation? v));
         Assert.NotNull(v);
         Assert.Equal("bad", v!.Message);
     }
@@ -143,17 +143,17 @@ public class ErrorExtensionsTests
     {
         Error err = new Error.NotFound("missing");
 
-        Assert.False(err.TryGetValidation(out var v));
+        Assert.False(err.TryGetValidation(out Error.Validation? v));
         Assert.Null(v);
     }
 
     [Fact]
     public void TryGetUnexpected_ReturnsTrueForUnexpected()
     {
-        var ex = new InvalidOperationException("boom");
+        InvalidOperationException ex = new InvalidOperationException("boom");
         Error err = new Error.Unexpected("fail", ex);
 
-        Assert.True(err.TryGetUnexpected(out var u));
+        Assert.True(err.TryGetUnexpected(out Error.Unexpected? u));
         Assert.NotNull(u);
         Assert.Equal("fail", u!.Message);
         Assert.Equal(ex, u.Exception);

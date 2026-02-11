@@ -167,7 +167,7 @@ public class OperationTests
     [Fact]
     public void PatternMatching_WorksForFailure()
     {
-        var error = new Error.Validation("bad");
+        Error.Validation error = new Error.Validation("bad");
         Operation<int> op = new Operation<int>.Failure(error);
 
         string result = op switch

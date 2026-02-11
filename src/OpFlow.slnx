@@ -4,6 +4,8 @@
     <File Path="Directory.Build.props" />
     <File Path="NuGet.Config" />
   </Folder>
+  <Project Path="OpFlow.Converters.NewtonsoftJson.Tests/OpFlow.Converters.NewtonsoftJson.Tests.csproj" Id="30693991-cbbb-4d49-952a-ee73c9b812a3" />
+  <Project Path="OpFlow.Converters.NewtonsoftJson/OpFlow.Converters.NewtonsoftJson.csproj" Id="ff483646-a56c-4ad9-b9a8-b636172caab8" />
   <Project Path="OpFlow.Generators/OpFlow.Generators.csproj" />
   <Project Path="OpFlow.Tests/OpFlow.Tests.csproj" Id="42c3f74c-d072-422a-acf7-69c60f95d206" />
   <Project Path="OpFlow/OpFlow.csproj" />

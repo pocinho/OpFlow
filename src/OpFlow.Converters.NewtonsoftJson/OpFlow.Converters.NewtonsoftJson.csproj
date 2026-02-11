@@ -5,16 +5,16 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
-		<PackageId>OpFlow</PackageId>
+		<PackageId>OpFlow.Converters.NewtonsoftJson</PackageId>
 		<Authors>Paulo Pocinho</Authors>
 		<Company>Paulo Pocinho</Company>
-		<Product>OpFlow</Product>
+		<Product>OpFlow.Converters.NewtonsoftJson</Product>
 		<Copyright>Copyright (c) 2026 Paulo Pocinho</Copyright>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/pocinho/OpFlow</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/pocinho/OpFlow</RepositoryUrl>
-		<Description>Functional pipeline and discriminated union framework for C#.</Description>
-		<PackageTags>functional;pipeline;union;monad;validation;result;opflow;operation</PackageTags>
+		<Description>Newtonsoft.Json converters for OpFlow discriminated unions.</Description>
+		<PackageTags>json;functional;pipeline;union;monad;validation;result;opflow;operation</PackageTags>
 		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 		<Version>1.0.0.0</Version>
 		<AssemblyVersion>1.0.0.0</AssemblyVersion>
@@ -30,7 +30,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\OpFlow.Generators\OpFlow.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\OpFlow\OpFlow.csproj" />
 	</ItemGroup>
 
 </Project>
