@@ -22,11 +22,6 @@ internal sealed class OperationModel
     public string Namespace => Union.Namespace;
     public Accessibility Accessibility => Union.Accessibility;
 
-    private static readonly SymbolDisplayFormat FqnFormat =
-        SymbolDisplayFormat.FullyQualifiedFormat
-            .WithGenericsOptions(SymbolDisplayGenericsOptions.IncludeTypeParameters)
-            .WithMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers);
-
     public OperationModel(UnionModel union)
     {
         Union = union;
@@ -61,10 +56,10 @@ internal sealed class OperationModel
     }
 
     public string SuccessCaseFQN =>
-        SuccessCase.CaseTypeSymbol.ToDisplayString(FqnFormat);   // e.g. global::OpFlow.Operation<T>.Success
+        $"global::{StripGlobal(Union.FullyQualifiedName)}.{SuccessCase.Name}";
 
     public string FailureCaseFQN =>
-        FailureCase.CaseTypeSymbol.ToDisplayString(FqnFormat);   // e.g. global::OpFlow.Operation<T>.Failure
+        $"global::{StripGlobal(Union.FullyQualifiedName)}.{FailureCase.Name}";
 
     public string ErrorTypeFQN =>
         StripGlobal(ErrorField.Type);

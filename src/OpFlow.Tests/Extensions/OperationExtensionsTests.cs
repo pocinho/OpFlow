@@ -1,0 +1,305 @@
+﻿// Copyright (c) 2026 Paulo Pocinho.
+
+using OpFlow.Extensions;
+
+namespace OpFlow.Tests.Extensions;
+
+public class OperationExtensionsTests
+{
+    // ------------------------------------------------------------
+    // 1. Basic Helpers
+    // ------------------------------------------------------------
+
+    [Fact]
+    public void IsSuccess_ReturnsTrue_ForSuccess()
+    {
+        Operation<int>.Success op = new Operation<int>.Success(10);
+        Assert.True(op.IsSuccess());
+        Assert.False(op.IsFailure());
+    }
+
+    [Fact]
+    public void TryGet_ReturnsValue_ForSuccess()
+    {
+        Operation<string>.Success op = new Operation<string>.Success("hello");
+
+        bool ok = op.TryGet(out string value);
+
+        Assert.True(ok);
+        Assert.Equal("hello", value);
+    }
+
+    [Fact]
+    public void TryGetError_ReturnsError_ForFailure()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int>.Failure op = new Operation<int>.Failure(error);
+
+        bool ok = op.TryGetError(out Error e);
+
+        Assert.True(ok);
+        Assert.Equal(error, e);
+    }
+
+    // ------------------------------------------------------------
+    // 2. Tap / TapError
+    // ------------------------------------------------------------
+
+    [Fact]
+    public void Tap_ExecutesAction_OnSuccess()
+    {
+        int captured = 0;
+        Operation<int>.Success op = new Operation<int>.Success(5);
+
+        op.Tap(v => captured = v);
+
+        Assert.Equal(5, captured);
+    }
+
+    [Fact]
+    public void TapError_ExecutesAction_OnFailure()
+    {
+        Error captured = null!;
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int>.Failure op = new Operation<int>.Failure(error);
+
+        op.TapError(e => captured = e);
+
+        Assert.Equal(error, captured);
+    }
+
+    // ------------------------------------------------------------
+    // 3. OnSuccess / OnFailure
+    // ------------------------------------------------------------
+
+    [Fact]
+    public void OnSuccess_ExecutesAction()
+    {
+        int captured = 0;
+        Operation<int>.Success op = new Operation<int>.Success(42);
+
+        op.OnSuccess(v => captured = v);
+
+        Assert.Equal(42, captured);
+    }
+
+    [Fact]
+    public void OnFailure_ExecutesAction()
+    {
+        Error captured = null!;
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int>.Failure op = new Operation<int>.Failure(error);
+
+        op.OnFailure(e => captured = e);
+
+        Assert.Equal(error, captured);
+    }
+
+    // ------------------------------------------------------------
+    // 4. Map
+    // ------------------------------------------------------------
+
+    [Fact]
+    public void Map_TransformsValue_OnSuccess()
+    {
+        Operation<int>.Success op = new Operation<int>.Success(10);
+
+        Operation<int> result = op.Map(v => v * 2);
+
+        Assert.True(result.IsSuccess());
+        Assert.True(result.TryGet(out int value));
+        Assert.Equal(20, value);
+    }
+
+    [Fact]
+    public void Map_PreservesError_OnFailure()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int>.Failure op = new Operation<int>.Failure(error);
+
+        Operation<int> result = op.Map(v => v * 2);
+
+        Assert.True(result.IsFailure());
+        Assert.True(result.TryGetError(out Error e));
+        Assert.Equal(error, e);
+    }
+
+    // ------------------------------------------------------------
+    // 5. Bind
+    // ------------------------------------------------------------
+
+    [Fact]
+    public void Bind_ChainsOperations()
+    {
+        Operation<int>.Success op = new Operation<int>.Success(10);
+
+        Operation<string> result = op.Bind(v => new Operation<string>.Success($"v={v}"));
+
+        Assert.True(result.IsSuccess());
+        Assert.True(result.TryGet(out string value));
+        Assert.Equal("v=10", value);
+    }
+
+    [Fact]
+    public void Bind_PropagatesFailure()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int>.Failure op = new Operation<int>.Failure(error);
+
+        Operation<string> result = op.Bind(v => new Operation<string>.Success("ignored"));
+
+        Assert.True(result.IsFailure());
+        Assert.True(result.TryGetError(out Error e));
+        Assert.Equal(error, e);
+    }
+
+    // ------------------------------------------------------------
+    // 6. Recover
+    // ------------------------------------------------------------
+
+    [Fact]
+    public void Recover_ReturnsOriginal_OnSuccess()
+    {
+        Operation<int>.Success op = new Operation<int>.Success(5);
+
+        Operation<int> result = op.Recover(_ => 99);
+
+        Assert.True(result.IsSuccess());
+        Assert.True(result.TryGet(out int value));
+        Assert.Equal(5, value);
+    }
+
+    [Fact]
+    public void Recover_UsesFallback_OnFailure()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int>.Failure op = new Operation<int>.Failure(error);
+
+        Operation<int> result = op.Recover(_ => 99);
+
+        Assert.True(result.IsSuccess());
+        Assert.True(result.TryGet(out int value));
+        Assert.Equal(99, value);
+    }
+
+    // ------------------------------------------------------------
+    // 7. Async Map / Bind
+    // ------------------------------------------------------------
+
+    [Fact]
+    public async Task MapAsync_TransformsValue()
+    {
+        Operation<int>.Success op = new Operation<int>.Success(10);
+
+        Operation<int> result = await op.MapAsync(async v =>
+        {
+            await Task.Delay(1);
+            return v * 3;
+        });
+
+        Assert.True(result.IsSuccess());
+        Assert.True(result.TryGet(out int value));
+        Assert.Equal(30, value);
+    }
+
+    [Fact]
+    public async Task BindAsync_ChainsAsyncOperations()
+    {
+        // Arrange
+        Task<Operation<int>> task =
+            Task.FromResult<Operation<int>>(new Operation<int>.Success(10));
+
+        // Act
+        Operation<string> result = await OperationExtensions.BindAsync<int, string>(
+            task,
+            async v =>
+            {
+                await Task.Delay(1);
+                return new Operation<string>.Success($"async={v}");
+            });
+
+        // Assert
+        Assert.True(result.IsSuccess());
+        Assert.True(result.TryGet(out string value));
+        Assert.Equal("async=10", value);
+    }
+
+    // ------------------------------------------------------------
+    // 8. Async Tap / OnSuccess / OnFailure
+    // ------------------------------------------------------------
+
+    [Fact]
+    public async Task TapAsync_ExecutesAction()
+    {
+        int captured = 0;
+        Task<Operation<int>> op = Task.FromResult<Operation<int>>(new Operation<int>.Success(7));
+
+        await op.TapAsync(async v => { captured = v; await Task.Yield(); });
+
+        Assert.Equal(7, captured);
+    }
+
+    [Fact]
+    public async Task OnFailureAsync_ExecutesAction()
+    {
+        Error captured = null!;
+        Error.Validation error = new Error.Validation("bad");
+        Task<Operation<int>> op = Task.FromResult<Operation<int>>(new Operation<int>.Failure(error));
+
+        await op.OnFailureAsync(async e => { captured = e; await Task.Yield(); });
+
+        Assert.Equal(error, captured);
+    }
+
+    // ------------------------------------------------------------
+    // 9. Async Recover
+    // ------------------------------------------------------------
+
+    [Fact]
+    public async Task RecoverAsync_UsesFallback()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Task<Operation<int>> op = Task.FromResult<Operation<int>>(new Operation<int>.Failure(error));
+
+        Operation<int> result = await op.RecoverAsync(async _ =>
+        {
+            await Task.Delay(1);
+            return 123;
+        });
+
+        Assert.True(result.IsSuccess());
+        Assert.True(result.TryGet(out int value));
+        Assert.Equal(123, value);
+    }
+
+    // ------------------------------------------------------------
+    // 10. Match / MatchAsync
+    // ------------------------------------------------------------
+
+    [Fact]
+    public void Match_ReturnsSuccessBranch()
+    {
+        Operation<int>.Success op = new Operation<int>.Success(10);
+
+        int result = op.Match(
+            success => success * 2,
+            failure => -1
+        );
+
+        Assert.Equal(20, result);
+    }
+
+    [Fact]
+    public async Task MatchAsync_ReturnsFailureBranch()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Task<Operation<int>> op = Task.FromResult<Operation<int>>(new Operation<int>.Failure(error));
+
+        int result = await op.MatchAsync(
+            success => Task.FromResult(success * 2),
+            failure => Task.FromResult(-1)
+        );
+
+        Assert.Equal(-1, result);
+    }
+}

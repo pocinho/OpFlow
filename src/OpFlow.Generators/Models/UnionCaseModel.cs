@@ -11,14 +11,5 @@ internal sealed record UnionCaseModel(
     IReadOnlyList<string> GenericParameters,
     string? BaseTypeName,
     Accessibility Accessibility,
-    IReadOnlyList<AttributeModel> Attributes,
-    string? XmlDocumentation,
     INamedTypeSymbol CaseTypeSymbol
-)
-{
-    public string FullyQualifiedName =>
-        $"global::{CaseTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}";
-
-    public string Namespace =>
-        CaseTypeSymbol.ContainingNamespace.ToDisplayString();
-}
+);

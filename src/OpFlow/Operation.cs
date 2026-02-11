@@ -7,15 +7,29 @@ namespace OpFlow;
 [Union]
 public abstract partial record Operation<T>
 {
-    public sealed partial record Success(T Result) : Operation<T> { }
+    public sealed partial record Success(T Result) : Operation<T>
+    {
+        public override string ToString() => $"Success: {Result}";
+    }
 
-    public sealed partial record Failure(Error Error) : Operation<T> { }
+    public sealed partial record Failure(Error Error) : Operation<T>
+    {
+        public override string ToString() => $"Failure: {Error}";
+    }
 
-    // Implicit: T → Success(T)
-    public static implicit operator Operation<T>(T value)
-        => new Success(value);
-
-    // Implicit: Error → Failure(Error)
     public static implicit operator Operation<T>(Error error)
         => new Failure(error);
+
+    public static implicit operator Operation<T>(Exception ex)
+        => new Failure(new Error.Unexpected(ex.Message, ex));
+
+    public override string ToString()
+    {
+        return this switch
+        {
+            Success s => s.ToString(),
+            Failure f => f.ToString(),
+            _ => throw new InvalidOperationException()
+        };
+    }
 }

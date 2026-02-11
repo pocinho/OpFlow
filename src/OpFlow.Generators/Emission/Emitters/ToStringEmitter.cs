@@ -37,9 +37,8 @@ internal sealed class ToStringEmitter : IOperationEmitter
 
     private static void EmitToString(CodeWriter w, OperationModel op)
     {
-        // These MUST come from Roslyn symbols, not string concatenation.
-        string successFqn = op.SuccessCaseFQN;   // e.g., global::OpFlow.Operation<T>.Success
-        string failureFqn = op.FailureCaseFQN;   // e.g., global::OpFlow.Operation<T>.Failure
+        string successFqn = op.SuccessCaseFQN;   // global::OpFlow.Operation<T>.Success
+        string failureFqn = op.FailureCaseFQN;   // global::OpFlow.Operation<T>.Failure
 
         string resultField = op.ResultField.Name; // "Result"
         string errorField = op.ErrorField.Name;   // "Error"

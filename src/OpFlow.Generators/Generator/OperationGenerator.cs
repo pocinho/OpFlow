@@ -16,7 +16,6 @@ public sealed class OperationGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // 1. Parse all unions
         IncrementalValueProvider<ImmutableArray<UnionModel>> unions = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (node, _) => node is RecordDeclarationSyntax,
@@ -25,37 +24,15 @@ public sealed class OperationGenerator : IIncrementalGenerator
             .Select(static (model, _) => model!)
             .Collect();
 
-        // 2. Register the main output
         context.RegisterSourceOutput(unions, static (spc, unionList) =>
         {
-            // Build semantic OperationModel (if present) – only for Operation<T>
             OperationModel? operation = OperationSemanticModelBuilder.TryBuild(unionList);
-
-            if (operation is not null)
-            {
-                Diagnostic diag = Diagnostic.Create(
-                    new DiagnosticDescriptor(
-                        id: "OPFQN",
-                        title: "Operation FQN Debug",
-                        messageFormat: "SuccessCaseFQN = '{0}', FailureCaseFQN = '{1}'",
-                        category: "Debug",
-                        DiagnosticSeverity.Info,
-                        isEnabledByDefault: true),
-                    Location.None,
-                    operation.SuccessCaseFQN,
-                    operation.FailureCaseFQN);
-
-                spc.ReportDiagnostic(diag);
-            }
 
             foreach (UnionModel union in unionList)
             {
                 bool isError = union.Name == "Error";
                 bool isOperation = union.Name == "Operation" && operation is not null;
 
-                //
-                // Emitters for Operation<T>
-                //
                 if (isOperation)
                 {
                     IOperationEmitter[] opEmitters =
@@ -89,7 +66,7 @@ public sealed class OperationGenerator : IIncrementalGenerator
                         new FlattenEmitter(),
 
                         // Representation
-                        new ToStringEmitter(),
+                        //new ToStringEmitter(),
                     ];
 
                     foreach (IOperationEmitter emitter in opEmitters)
@@ -98,9 +75,6 @@ public sealed class OperationGenerator : IIncrementalGenerator
                     }
                 }
 
-                //
-                // Emitters for Error union
-                //
                 if (isError)
                 {
                     IErrorEmitter[] errorEmitters =

@@ -4,6 +4,8 @@ namespace OpFlow.Tests.Canon.Representation;
 
 public class OperationToStringTests
 {
+    private record TestRecord(string Name, int Age);
+
     // -------------------------------------------------------------
     // Success<T>.ToString()
     // -------------------------------------------------------------
@@ -20,12 +22,12 @@ public class OperationToStringTests
     [Fact]
     public void ToString_OnSuccess_UsesValueToString()
     {
-        var obj = new { Name = "Paulo", Age = 99 };
-        Operation<object> op = Operation.Success(obj);
+        TestRecord record = new TestRecord("Paulo", 99);
+        Operation<TestRecord> op = Operation.Success(record);
 
         string result = op.ToString();
 
-        Assert.Equal($"Success: {obj}", result);
+        Assert.Equal($"Success: {record}", result);
     }
 
     // -------------------------------------------------------------

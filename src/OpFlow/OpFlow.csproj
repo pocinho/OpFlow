@@ -7,9 +7,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\OpFlow.Generators\OpFlow.Generators.csproj"
-		                  OutputItemType="Analyzer"
-		                  ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\OpFlow.Generators\OpFlow.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 	<Target Name="ListCompileItems" AfterTargets="Build">
