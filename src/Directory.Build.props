@@ -6,14 +6,14 @@
 
     <!-- See https://aka.ms/dotnet/msbuild/customize for more details on customizing your build -->
 	<PropertyGroup>
-		<PackageId>PP.Toolkit.Operation</PackageId>
+		<PackageId>OpFlow</PackageId>
 		<Authors>Paulo Pocinho</Authors>
 		<Company>Paulo Pocinho</Company>
-		<Product>PP.Toolkit.Operation</Product>
+		<Product>OpFlow</Product>
 		<Copyright>Copyright (c) 2026 Paulo Pocinho</Copyright>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageProjectUrl>https://github.com/pocinho/PP.Toolkit.Operation</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/pocinho/PP.Toolkit.Operation</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/pocinho/OpFlow</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/pocinho/OpFlow</RepositoryUrl>
 		<Description>Operation monad.</Description>
 		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 		<Version>0.0.0.1</Version>
