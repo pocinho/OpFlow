@@ -14,7 +14,7 @@
 		<PackageProjectUrl>https://github.com/pocinho/OpFlow</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/pocinho/OpFlow</RepositoryUrl>
 		<Description>Newtonsoft.Json converters for OpFlow discriminated unions.</Description>
-		<PackageTags>json;functional;pipeline;union;monad;validation;result;opflow;operation</PackageTags>
+		<PackageTags>OpFlow;Newtonsoft.Json;Converters;Discriminated Unions</PackageTags>
 		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 		<Version>1.0.0.0</Version>
 		<AssemblyVersion>1.0.0.0</AssemblyVersion>
@@ -27,7 +27,13 @@
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
 		<IsPackable>true</IsPackable>
+
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="\"/>
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />

@@ -27,8 +27,14 @@
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 
 		<IsPackable>true</IsPackable>
+
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="\"/>
+	</ItemGroup>
+	
 	<ItemGroup>
 		<ProjectReference Include="..\OpFlow.Generators\OpFlow.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
