@@ -5,21 +5,31 @@ using Newtonsoft.Json.Linq;
 
 namespace OpFlow.Converters.NewtonsoftJson;
 
-public sealed class OpFlowErrorConverter : JsonConverter<Error>
+public sealed class OpFlowErrorConverter : JsonConverter
 {
-    public override void WriteJson(JsonWriter writer, Error? value, JsonSerializer serializer)
+    public override bool CanConvert(Type objectType)
+        => typeof(Error).IsAssignableFrom(objectType);
+
+    public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer)
     {
-        if (value is null)
+        if (value is not Error error)
         {
             writer.WriteNull();
             return;
         }
 
-        writer.WriteStartObject();
-        writer.WritePropertyName("error");
+        // Detect whether we are serializing the root object
+        bool isRoot = string.IsNullOrEmpty(writer.Path);
+
+        if (isRoot)
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName("error");
+        }
+
         writer.WriteStartObject();
 
-        switch (value)
+        switch (error)
         {
             case Error.Validation v:
                 writer.WritePropertyName("errorType");
@@ -71,18 +81,19 @@ public sealed class OpFlowErrorConverter : JsonConverter<Error>
                 break;
 
             default:
-                throw new JsonSerializationException($"Unknown Error subtype: {value.GetType()}");
+                throw new JsonSerializationException($"Unknown Error subtype: {error.GetType()}");
         }
 
         writer.WriteEndObject();
-        writer.WriteEndObject();
+
+        if (isRoot)
+            writer.WriteEndObject();
     }
 
-    public override Error? ReadJson(
+    public override object? ReadJson(
         JsonReader reader,
         Type objectType,
-        Error? existingValue,
-        bool hasExistingValue,
+        object? existingValue,
         JsonSerializer serializer)
     {
         if (reader.TokenType == JsonToken.Null)
@@ -90,12 +101,21 @@ public sealed class OpFlowErrorConverter : JsonConverter<Error>
 
         JObject root = JObject.Load(reader);
 
-        if (!root.TryGetValue("error", StringComparison.OrdinalIgnoreCase, out JToken? errorToken)
-            || errorToken is not JObject jo)
-            throw new JsonSerializationException("Missing 'error' object");
+        // Case 1: Root-level error object: { "error": { ... } }
+        JObject jo;
+        if (root.TryGetValue("error", StringComparison.OrdinalIgnoreCase, out JToken? errorToken)
+            && errorToken is JObject wrapped)
+        {
+            jo = wrapped;
+        }
+        else
+        {
+            // Case 2: Nested error object: { "errorType": "...", "message": "..." }
+            jo = root;
+        }
 
         string type = jo["errorType"]?.Value<string>()?.ToLowerInvariant()
-            ?? throw new JsonSerializationException("Missing 'errorType'");
+                      ?? throw new JsonSerializationException("Missing 'errorType'");
 
         string message = jo["message"]?.Value<string>() ?? "Unknown error";
 
