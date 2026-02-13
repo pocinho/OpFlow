@@ -1,3 +1,5 @@
+![OpFlow Banner](./img/banner.svg)
+
 # **OpFlow**
 *A lightweight, expressive, functional result type for C#.*
 
