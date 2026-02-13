@@ -1,0 +1,28 @@
+<svg width="260" height="80" viewBox="0 0 260 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background (optional, remove for transparent) -->
+  <!-- <rect width="260" height="80" fill="#FFFFFF" /> -->
+
+  <!-- Flow node symbol -->
+  <g transform="translate(20, 40)">
+    <!-- Outer circle -->
+    <circle cx="0" cy="0" r="14" fill="none" stroke="#3A7BFF" stroke-width="2.5" />
+    <!-- Inner dot -->
+    <circle cx="0" cy="0" r="5" fill="#3A7BFF" />
+    <!-- Arrow shaft -->
+    <line x1="10" y1="0" x2="32" y2="0" stroke="#3A7BFF" stroke-width="2.5" stroke-linecap="round" />
+    <!-- Arrow head -->
+    <polygon points="32,0 26,-5 26,5" fill="#3A7BFF" />
+  </g>
+
+  <!-- Wordmark -->
+  <text x="70" y="38" font-family="Segoe UI, system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+        font-size="26" font-weight="600" fill="#2F3545">
+    OpFlow
+  </text>
+
+  <!-- Tagline -->
+  <text x="70" y="58" font-family="Segoe UI, system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+        font-size="12" fill="#6B7280">
+    Clean pipelines. Clear outcomes.
+  </text>
+</svg>
