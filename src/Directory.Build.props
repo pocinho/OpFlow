@@ -1,7 +1,24 @@
 <Project>
-    <PropertyGroup>
-        <WarningLevel>9999</WarningLevel>
-        <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-	    <NoWarn>$(NoWarn);1591</NoWarn>
-    </PropertyGroup>
+	<PropertyGroup>
+		<WarningLevel>9999</WarningLevel>
+		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+		<NoWarn>$(NoWarn);1591</NoWarn>
+
+		<!-- Shared package metadata -->
+		<Authors>Paulo Pocinho</Authors>
+		<Company>Paulo Pocinho</Company>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageProjectUrl>https://github.com/pocinho/OpFlow</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/pocinho/OpFlow</RepositoryUrl>
+		<PackageTags>OpFlow;Converters;Discriminated Unions;functional;pipeline;union;monad;validation;result;operation</PackageTags>
+
+		<!-- Versioning (centralized) -->
+		<Version>1.0.0</Version>
+
+		<!-- Common build settings -->
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<IsPackable>true</IsPackable>
+	</PropertyGroup>
 </Project>
