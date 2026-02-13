@@ -183,7 +183,7 @@ public static class Op
         => op.Ensure(predicate, errorFactory);
 
     /// <summary>
-    /// Asynchronous version of <see cref="Ensure{T}"/>.
+    /// Asynchronous version of <see cref="Ensure{T}(Operation{T}, Func{T, bool}, Func{T, Error})"/>.
     /// </summary>
     public static Task<Operation<T>> EnsureAsync<T>(
         Task<Operation<T>> op,
@@ -201,7 +201,7 @@ public static class Op
         => op.Require(predicate, error);
 
     /// <summary>
-    /// Asynchronous version of <see cref="Require{T}"/>.
+    /// Asynchronous version of <see cref="Require{T}(Operation{T}, Func{T, bool}, Error)"/>.
     /// </summary>
     public static Task<Operation<T>> RequireAsync<T>(
         Task<Operation<T>> op,
@@ -218,7 +218,7 @@ public static class Op
         => op.Validate(rules);
 
     /// <summary>
-    /// Asynchronous version of <see cref="Validate{T}"/>.
+    /// Asynchronous version of <see cref="Validate{T}(Operation{T}, Func{T, Error?>[])"/>.
     /// </summary>
     public static Task<Operation<T>> ValidateAsync<T>(
         Task<Operation<T>> op,
@@ -234,7 +234,7 @@ public static class Op
         => op.ValidateAll(rules);
 
     /// <summary>
-    /// Asynchronous version of <see cref="ValidateAll{T}"/>.
+    /// Asynchronous version of <see cref="ValidateAll{T}(Operation{T}, Func{T, Error?>[])"/>.
     /// </summary>
     public static Task<Operation<T>> ValidateAllAsync<T>(
         Task<Operation<T>> op,
@@ -249,13 +249,16 @@ public static class Op
     /// <summary>
     /// Maps a successful value using the specified selector.
     /// </summary>
+    /// <remarks>
+    /// Equivalent to <see cref="Op.Select{T, TResult}(Operation{T}, Func{T, TResult})"/>.
+    /// </remarks>
     public static Operation<TResult> Select<T, TResult>(
         Operation<T> op,
         Func<T, TResult> selector)
         => op.Select(selector);
 
     /// <summary>
-    /// Asynchronous version of <see cref="Select{T, TResult}"/>.
+    /// Asynchronous version of <see cref="Op.Select{T, TResult}(Operation{T}, Func{T, TResult})"/>.
     /// </summary>
     public static Task<Operation<TResult>> SelectAsync<T, TResult>(
         Task<Operation<T>> op,
@@ -265,6 +268,9 @@ public static class Op
     /// <summary>
     /// Chains two operations and projects their results.
     /// </summary>
+    /// <remarks>
+    /// Equivalent to <see cref="Op.SelectMany{T, TIntermediate, TResult}(Operation{T}, Func{T, Operation{TIntermediate}}, Func{T, TIntermediate, TResult})"/>.
+    /// </remarks>
     public static Operation<TResult> SelectMany<T, TIntermediate, TResult>(
         Operation<T> op,
         Func<T, Operation<TIntermediate>> bind,
@@ -272,7 +278,7 @@ public static class Op
         => op.SelectMany(bind, project);
 
     /// <summary>
-    /// Asynchronous version of <see cref="SelectMany{T, TIntermediate, TResult}"/>.
+    /// Asynchronous version of <see cref="Op.SelectMany{T, TIntermediate, TResult}(Operation{T}, Func{T, Operation{TIntermediate}}, Func{T, TIntermediate, TResult})"/>.
     /// </summary>
     public static Task<Operation<TResult>> SelectManyAsync<T, TIntermediate, TResult>(
         Task<Operation<T>> op,
@@ -311,7 +317,7 @@ public static class Op
         => op.Map(map);
 
     /// <summary>
-    /// Asynchronous version of <see cref="Map{T, TResult}"/>.
+    /// Asynchronous version of <see cref="Map{T, TResult}(Operation{T}, Func{T, TResult})"/>.
     /// </summary>
     public static Task<Operation<TResult>> MapAsync<T, TResult>(
         Task<Operation<T>> op,
@@ -327,7 +333,7 @@ public static class Op
         => op.Bind(bind);
 
     /// <summary>
-    /// Asynchronous version of <see cref="Bind{T, TResult}"/>.
+    /// Asynchronous version of <see cref="Bind{T, TResult}(Operation{T}, Func{T, Operation{TResult}})"/>.
     /// </summary>
     public static Task<Operation<TResult>> BindAsync<T, TResult>(
         Task<Operation<T>> op,
@@ -356,7 +362,7 @@ public static class Op
         => op.TapError(action);
 
     /// <summary>
-    /// Asynchronous version of <see cref="Tap{T}"/>.
+    /// Asynchronous version of <see cref="Tap{T}(Operation{T}, Action{T})"/>.
     /// </summary>
     public static Task<Operation<T>> TapAsync<T>(
         Task<Operation<T>> op,
@@ -364,7 +370,7 @@ public static class Op
         => op.TapAsync(actionAsync);
 
     /// <summary>
-    /// Asynchronous version of <see cref="TapError{T}"/>.
+    /// Asynchronous version of <see cref="TapError{T}(Operation{T}, Action{Error})"/>.
     /// </summary>
     public static Task<Operation<T>> TapErrorAsync<T>(
         Task<Operation<T>> op,
@@ -401,7 +407,7 @@ public static class Op
         => op.Recover(fallback);
 
     /// <summary>
-    /// Asynchronous version of <see cref="Recover{T}"/>.
+    /// Asynchronous version of <see cref="Recover{T}(Operation{T}, Func{Error, T})"/>.
     /// </summary>
     public static Task<Operation<T>> RecoverAsync<T>(
         Task<Operation<T>> op,
@@ -432,7 +438,7 @@ public static class Op
         => op.Match(onSuccess, onFailure);
 
     /// <summary>
-    /// Asynchronous version of <see cref="Match{T, TResult}"/>.
+    /// Asynchronous version of <see cref="Match{T, TResult}(Operation{T}, Func{T, TResult}, Func{Error, TResult})"/>.
     /// </summary>
     public static Task<TResult> MatchAsync<T, TResult>(
         Task<Operation<T>> op,
@@ -441,7 +447,7 @@ public static class Op
         => op.MatchAsync(onSuccess, onFailure);
 
     /// <summary>
-    /// Asynchronous version of <see cref="Match{T}"/>.
+    /// Asynchronous version of <see cref="Match{T}(Operation{T}, Action{T}, Action{Error})"/>.
     /// </summary>
     public static Task MatchAsync<T>(
         Task<Operation<T>> op,
