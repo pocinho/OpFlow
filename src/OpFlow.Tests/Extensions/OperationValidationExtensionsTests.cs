@@ -204,29 +204,30 @@ public class OperationValidationExtensionsTests
     // ------------------------------------------------------------
 
     [Fact]
-    public void Validate_AllValidatorsPass()
+    public void Validate_AllRulesPass()
     {
         Operation<int>.Success op = new Operation<int>.Success(10);
 
         Operation<int> result = op.Validate(
-            v => new Operation<int>.Success(v),
-            v => new Operation<int>.Success(v + 1));
+            v => null,                     // passes
+            v => null                      // passes
+        );
 
         Assert.True(result.IsSuccess());
         Assert.True(result.TryGet(out int value));
-        Assert.Equal(11, value);
+        Assert.Equal(10, value);
     }
 
     [Fact]
     public void Validate_StopsOnFirstFailure()
     {
         Error.Validation error = new Error.Validation("bad");
-
         Operation<int>.Success op = new Operation<int>.Success(10);
 
         Operation<int> result = op.Validate(
-            v => new Operation<int>.Failure(error),
-            v => new Operation<int>.Success(v + 1)); // never executed
+            v => error,                    // fails immediately
+            v => null                      // never executed
+        );
 
         Assert.True(result.IsFailure());
         Assert.True(result.TryGetError(out Error e));
@@ -238,49 +239,30 @@ public class OperationValidationExtensionsTests
     // ------------------------------------------------------------
 
     [Fact]
-    public async Task ValidateAsync_AllValidatorsPass()
+    public async Task ValidateAsync_AllRulesPass()
     {
-        Task<Operation<int>> task =
-            Task.FromResult<Operation<int>>(new Operation<int>.Success(10));
+        Task<Operation<int>> task = Task.FromResult<Operation<int>>(new Operation<int>.Success(10));
 
-        Operation<int> result = await OperationValidationExtensions.ValidateAsync(
-            task,
-            async v =>
-            {
-                await Task.Delay(1);
-                return new Operation<int>.Success(v);
-            },
-            async v =>
-            {
-                await Task.Delay(1);
-                return new Operation<int>.Success(v + 1);
-            });
+        Operation<int> result = await task.ValidateAsync(
+            async v => { await Task.Delay(1); return null; },
+            async v => { await Task.Delay(1); return null; }
+        );
 
         Assert.True(result.IsSuccess());
         Assert.True(result.TryGet(out int value));
-        Assert.Equal(11, value);
+        Assert.Equal(10, value);
     }
 
     [Fact]
     public async Task ValidateAsync_StopsOnFirstFailure()
     {
         Error.Validation error = new Error.Validation("bad");
+        Task<Operation<int>> task = Task.FromResult<Operation<int>>(new Operation<int>.Success(10));
 
-        Task<Operation<int>> task =
-            Task.FromResult<Operation<int>>(new Operation<int>.Success(10));
-
-        Operation<int> result = await OperationValidationExtensions.ValidateAsync(
-            task,
-            async v =>
-            {
-                await Task.Delay(1);
-                return new Operation<int>.Failure(error);
-            },
-            async v =>
-            {
-                await Task.Delay(1);
-                return new Operation<int>.Success(v + 1); // never executed
-            });
+        Operation<int> result = await task.ValidateAsync(
+            async v => { await Task.Delay(1); return error; },   // fails immediately
+            async v => { await Task.Delay(1); return null; }     // never executed
+        );
 
         Assert.True(result.IsFailure());
         Assert.True(result.TryGetError(out Error e));
@@ -297,8 +279,9 @@ public class OperationValidationExtensionsTests
         Operation<int>.Success op = new Operation<int>.Success(10);
 
         Operation<int> result = op.ValidateAll(
-            v => new Operation<int>.Success(v),
-            v => new Operation<int>.Success(v + 1));
+            v => null,
+            v => null
+        );
 
         Assert.True(result.IsSuccess());
         Assert.True(result.TryGet(out int value));
@@ -309,11 +292,11 @@ public class OperationValidationExtensionsTests
     public void ValidateAll_OneError()
     {
         Error.Validation error = new Error.Validation("bad");
-
         Operation<int>.Success op = new Operation<int>.Success(10);
 
         Operation<int> result = op.ValidateAll(
-            v => new Operation<int>.Failure(error));
+            v => error
+        );
 
         Assert.True(result.IsFailure());
         Assert.True(result.TryGetError(out Error e));
@@ -326,12 +309,12 @@ public class OperationValidationExtensionsTests
         Operation<int>.Success op = new Operation<int>.Success(10);
 
         Operation<int> result = op.ValidateAll(
-            v => new Operation<int>.Failure(new Error.Validation("e1")),
-            v => new Operation<int>.Failure(new Error.Validation("e2")));
+            v => new Error.Validation("e1"),
+            v => new Error.Validation("e2")
+        );
 
         Assert.True(result.IsFailure());
         Assert.True(result.TryGetError(out Error e));
-        Assert.IsType<Error.Validation>(e);
         Error.Validation validation = Assert.IsType<Error.Validation>(e);
         Assert.Equal("Multiple validation errors", validation.Message);
     }
@@ -343,16 +326,11 @@ public class OperationValidationExtensionsTests
     [Fact]
     public async Task ValidateAllAsync_NoErrors()
     {
-        Task<Operation<int>> task =
-            Task.FromResult<Operation<int>>(new Operation<int>.Success(10));
+        Task<Operation<int>> task = Task.FromResult<Operation<int>>(new Operation<int>.Success(10));
 
-        Operation<int> result = await OperationValidationExtensions.ValidateAllAsync(
-            task,
-            async v =>
-            {
-                await Task.Delay(1);
-                return new Operation<int>.Success(v);
-            });
+        Operation<int> result = await task.ValidateAllAsync(
+            async v => { await Task.Delay(1); return null; }
+        );
 
         Assert.True(result.IsSuccess());
         Assert.True(result.TryGet(out int value));
@@ -362,25 +340,15 @@ public class OperationValidationExtensionsTests
     [Fact]
     public async Task ValidateAllAsync_MultipleErrors()
     {
-        Task<Operation<int>> task =
-            Task.FromResult<Operation<int>>(new Operation<int>.Success(10));
+        Task<Operation<int>> task = Task.FromResult<Operation<int>>(new Operation<int>.Success(10));
 
-        Operation<int> result = await OperationValidationExtensions.ValidateAllAsync(
-            task,
-            async v =>
-            {
-                await Task.Delay(1);
-                return new Operation<int>.Failure(new Error.Validation("e1"));
-            },
-            async v =>
-            {
-                await Task.Delay(1);
-                return new Operation<int>.Failure(new Error.Validation("e2"));
-            });
+        Operation<int> result = await task.ValidateAllAsync(
+            async v => { await Task.Delay(1); return new Error.Validation("e1"); },
+            async v => { await Task.Delay(1); return new Error.Validation("e2"); }
+        );
 
         Assert.True(result.IsFailure());
         Assert.True(result.TryGetError(out Error e));
-        Assert.IsType<Error.Validation>(e);
         Error.Validation validation = Assert.IsType<Error.Validation>(e);
         Assert.Equal("Multiple validation errors", validation.Message);
     }

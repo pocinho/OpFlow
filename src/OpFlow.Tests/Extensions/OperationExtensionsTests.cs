@@ -277,29 +277,348 @@ public class OperationExtensionsTests
     // ------------------------------------------------------------
 
     [Fact]
-    public void Match_ReturnsSuccessBranch()
+    public void Operation_Match_ReturnsSuccessBranch()
     {
         Operation<int>.Success op = new Operation<int>.Success(10);
 
-        int result = op.Match(
-            success => success * 2,
-            failure => -1
+        string result = op.Match(
+            onSuccess: v => $"value:{v}",
+            onFailure: e => "error"
         );
 
-        Assert.Equal(20, result);
+        Assert.Equal("value:10", result);
     }
 
     [Fact]
-    public async Task MatchAsync_ReturnsFailureBranch()
+    public void Operation_Match_ReturnsFailureBranch()
     {
         Error.Validation error = new Error.Validation("bad");
-        Task<Operation<int>> op = Task.FromResult<Operation<int>>(new Operation<int>.Failure(error));
+        Operation<int>.Failure op = new Operation<int>.Failure(error);
 
-        int result = await op.MatchAsync(
-            success => Task.FromResult(success * 2),
-            failure => Task.FromResult(-1)
+        string result = op.Match(
+            onSuccess: v => "value",
+            onFailure: e => $"error:{e.GetMessage()}"
         );
 
-        Assert.Equal(-1, result);
+        Assert.Equal("error:bad", result);
+    }
+
+    [Fact]
+    public void Operation_Match_Void_InvokesSuccessBranch()
+    {
+        Operation<int>.Success op = new Operation<int>.Success(10);
+        string? observed = null;
+
+        op.Match(
+            onSuccess: v => observed = $"value:{v}",
+            onFailure: e => observed = "error"
+        );
+
+        Assert.Equal("value:10", observed);
+    }
+
+    [Fact]
+    public void Operation_Match_Void_InvokesFailureBranch()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int>.Failure op = new Operation<int>.Failure(error);
+        string? observed = null;
+
+        op.Match(
+            onSuccess: v => observed = "value",
+            onFailure: e => observed = $"error:{e.GetMessage()}"
+        );
+
+        Assert.Equal("error:bad", observed);
+    }
+
+    [Fact]
+    public async Task Operation_MatchAsync_ReturnsSuccessBranch()
+    {
+        Task<Operation<int>> task = Task.FromResult<Operation<int>>(new Operation<int>.Success(10));
+
+        string result = await task.MatchAsync(
+            onSuccess: async v =>
+            {
+                await Task.Delay(1);
+                return $"value:{v}";
+            },
+            onFailure: async e =>
+            {
+                await Task.Delay(1);
+                return "error";
+            }
+        );
+
+        Assert.Equal("value:10", result);
+    }
+
+    [Fact]
+    public async Task Operation_MatchAsync_ReturnsFailureBranch()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Task<Operation<int>> task = Task.FromResult<Operation<int>>(new Operation<int>.Failure(error));
+
+        string result = await task.MatchAsync(
+            onSuccess: async v =>
+            {
+                await Task.Delay(1);
+                return "value";
+            },
+            onFailure: async e =>
+            {
+                await Task.Delay(1);
+                return $"error:{e.GetMessage()}";
+            }
+        );
+
+        Assert.Equal("error:bad", result);
+    }
+
+    [Fact]
+    public async Task Operation_MatchAsync_Void_InvokesSuccessBranch()
+    {
+        Task<Operation<int>> task = Task.FromResult<Operation<int>>(new Operation<int>.Success(10));
+        string? observed = null;
+
+        await task.MatchAsync(
+            onSuccess: async v =>
+            {
+                await Task.Delay(1);
+                observed = $"value:{v}";
+            },
+            onFailure: async e =>
+            {
+                await Task.Delay(1);
+                observed = "error";
+            }
+        );
+
+        Assert.Equal("value:10", observed);
+    }
+
+    [Fact]
+    public async Task Operation_MatchAsync_Void_InvokesFailureBranch()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Task<Operation<int>> task = Task.FromResult<Operation<int>>(new Operation<int>.Failure(error));
+        string? observed = null;
+
+        await task.MatchAsync(
+            onSuccess: async v =>
+            {
+                await Task.Delay(1);
+                observed = "value";
+            },
+            onFailure: async e =>
+            {
+                await Task.Delay(1);
+                observed = $"error:{e.GetMessage()}";
+            }
+        );
+
+        Assert.Equal("error:bad", observed);
+    }
+
+    [Fact]
+    public void Match_Void_InvokesSuccessBranch()
+    {
+        // Arrange
+        Operation<int>.Success op = new Operation<int>.Success(42);
+        string? observed = null;
+
+        // Act
+        op.Match(
+            onSuccess: v => observed = $"success:{v}",
+            onFailure: e => observed = $"failure:{e.GetMessage()}"
+        );
+
+        // Assert
+        Assert.Equal("success:42", observed);
+    }
+
+    [Fact]
+    public void Match_Void_InvokesFailureBranch()
+    {
+        // Arrange
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int>.Failure op = new Operation<int>.Failure(error);
+        string? observed = null;
+
+        // Act
+        op.Match(
+            onSuccess: v => observed = $"success:{v}",
+            onFailure: e => observed = $"failure:{e.GetMessage()}"
+        );
+
+        // Assert
+        Assert.Equal("failure:bad", observed);
+    }
+
+    [Fact]
+    public void Match_Void_ThrowsOnNullSuccessHandler()
+    {
+        // Arrange
+        Operation<int>.Success op = new Operation<int>.Success(10);
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            op.Match(
+                onSuccess: null!,
+                onFailure: _ => { }
+            )
+        );
+    }
+
+    [Fact]
+    public void Match_Void_ThrowsOnNullFailureHandler()
+    {
+        // Arrange
+        Operation<int>.Failure op = new Operation<int>.Failure(new Error.Validation("bad"));
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            op.Match(
+                onSuccess: _ => { },
+                onFailure: null!
+            )
+        );
+    }
+
+    [Fact]
+    public void Match_Void_DoesNotInvokeBothBranches()
+    {
+        // Arrange
+        Operation<int>.Success op = new Operation<int>.Success(99);
+        bool successCalled = false;
+        bool failureCalled = false;
+
+        // Act
+        op.Match(
+            onSuccess: _ => successCalled = true,
+            onFailure: _ => failureCalled = true
+        );
+
+        // Assert
+        Assert.True(successCalled);
+        Assert.False(failureCalled);
+    }
+
+    // ------------------------------------------------------------
+    // 11. AsTask returns a completed Task
+    // ------------------------------------------------------------
+
+    [Fact]
+    public async Task AsTask_ReturnsCompletedTask_ForSuccess()
+    {
+        Operation<int>.Success op = new Operation<int>.Success(10);
+
+        Task<Operation<int>> task = op.AsTask();
+
+        Assert.True(task.IsCompleted);
+
+        Operation<int> result = await task;
+        Assert.True(result.IsSuccess());
+        Assert.True(result.TryGet(out int value));
+        Assert.Equal(10, value);
+    }
+
+    [Fact]
+    public async Task AsTask_ReturnsCompletedTask_ForFailure()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int>.Failure op = new Operation<int>.Failure(error);
+
+        Task<Operation<int>> task = op.AsTask();
+
+        Assert.True(task.IsCompleted);
+
+        Operation<int> result = await task;
+        Assert.True(result.IsFailure());
+        Assert.True(result.TryGetError(out Error e));
+        Assert.Equal(error, e);
+    }
+
+    // ------------------------------------------------------------
+    // 12. AsTask preserves the exact instance
+    // ------------------------------------------------------------
+
+    [Fact]
+    public async Task AsTask_PreservesInstance()
+    {
+        Operation<int>.Success op = new Operation<int>.Success(42);
+
+        Operation<int> result = await op.AsTask();
+
+        Assert.Same(op, result);
+    }
+
+    // ------------------------------------------------------------
+    // 13. AsTask works inside async pipelines
+    // ------------------------------------------------------------
+
+    [Fact]
+    public async Task AsTask_WorksInAsyncPipeline()
+    {
+        Operation<int>.Success op = new Operation<int>.Success(10);
+
+        Operation<int> result =
+            await op
+                .AsTask()
+                .SelectAsync(async v =>
+                {
+                    await Task.Delay(1);
+                    return v + 5;
+                });
+
+        Assert.True(result.IsSuccess());
+        Assert.True(result.TryGet(out int value));
+        Assert.Equal(15, value);
+    }
+
+    [Fact]
+    public async Task AsTask_WorksInAsyncBindPipeline()
+    {
+        Operation<int>.Success op = new Operation<int>.Success(10);
+
+        Operation<string> result =
+            await op
+                .AsTask()
+                .SelectManyAsync<int, string, string>(
+                    async v =>
+                    {
+                        await Task.Delay(1);
+                        return new Operation<string>.Success($"value={v}");
+                    },
+                    (v, s) => $"{s} (from {v})"
+                );
+
+        Assert.True(result.IsSuccess());
+        Assert.True(result.TryGet(out string value));
+        Assert.Equal("value=10 (from 10)", value);
+    }
+
+    // ------------------------------------------------------------
+    // 14. AsTask does not swallow failures in async pipelines
+    // ------------------------------------------------------------
+
+    [Fact]
+    public async Task AsTask_PropagatesFailureInAsyncPipeline()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int>.Failure op = new Operation<int>.Failure(error);
+
+        Operation<int> result =
+            await op
+                .AsTask()
+                .SelectAsync(async v =>
+                {
+                    await Task.Delay(1);
+                    return v + 1; // should never run
+                });
+
+        Assert.True(result.IsFailure());
+        Assert.True(result.TryGetError(out Error e));
+        Assert.Equal(error, e);
     }
 }

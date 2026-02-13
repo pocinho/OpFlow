@@ -207,4 +207,20 @@ public class ErrorExtensionsTests
 
         Assert.Equal("unexpected:boom", result);
     }
+
+    [Fact]
+    public void Error_Match_Void_InvokesCorrectBranch()
+    {
+        Error.NotFound notFound = new Error.NotFound("missing");
+        string? observed = null;
+
+        notFound.Match(
+            v => observed = "validation",
+            n => observed = $"notfound:{n.Message}",
+            u => observed = "unauthorized",
+            x => observed = "unexpected"
+        );
+
+        Assert.Equal("notfound:missing", observed);
+    }
 }

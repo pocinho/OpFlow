@@ -255,6 +255,31 @@ public static class OperationExtensions
         };
     }
 
+    public static void Match<T>(
+        this Operation<T> op,
+        Action<T> onSuccess,
+        Action<Error> onFailure)
+    {
+        if (onSuccess is null)
+            throw new ArgumentNullException(nameof(onSuccess));
+        if (onFailure is null)
+            throw new ArgumentNullException(nameof(onFailure));
+
+        switch (op)
+        {
+            case Operation<T>.Success s:
+                onSuccess(s.Result);
+                break;
+
+            case Operation<T>.Failure f:
+                onFailure(f.Error);
+                break;
+
+            default:
+                throw new InvalidOperationException("Unknown Operation state.");
+        }
+    }
+
     public static async Task<TResult> MatchAsync<T, TResult>(
         this Task<Operation<T>> opTask,
         Func<T, Task<TResult>> onSuccess,
@@ -268,5 +293,27 @@ public static class OperationExtensions
             Operation<T>.Failure f => await onFailure(f.Error),
             _ => throw new InvalidOperationException("Unknown Operation state.")
         };
+    }
+
+    public static async Task MatchAsync<T>(
+        this Task<Operation<T>> opTask,
+        Func<T, Task> onSuccess,
+        Func<Error, Task> onFailure)
+    {
+        Operation<T> op = await opTask.ConfigureAwait(false);
+
+        switch (op)
+        {
+            case Operation<T>.Success s:
+                await onSuccess(s.Result);
+                break;
+
+            case Operation<T>.Failure f:
+                await onFailure(f.Error);
+                break;
+
+            default:
+                throw new InvalidOperationException("Unknown Operation state.");
+        }
     }
 }

@@ -110,4 +110,30 @@ public static class ErrorExtensions
             _ => throw new InvalidOperationException("Unknown error case.")
         };
     }
+
+    public static void Match(
+        this Error error,
+        Action<Error.Validation> validation,
+        Action<Error.NotFound> notFound,
+        Action<Error.Unauthorized> unauthorized,
+        Action<Error.Unexpected> unexpected)
+    {
+        switch (error)
+        {
+            case Error.Validation v:
+                validation(v);
+                break;
+            case Error.NotFound n:
+                notFound(n);
+                break;
+            case Error.Unauthorized u:
+                unauthorized(u);
+                break;
+            case Error.Unexpected x:
+                unexpected(x);
+                break;
+            default:
+                throw new InvalidOperationException("Unknown error case.");
+        }
+    }
 }

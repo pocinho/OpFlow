@@ -92,17 +92,21 @@ public static class OperationValidationExtensions
 
     public static Operation<T> Validate<T>(
         this Operation<T> op,
-        params Func<T, Operation<T>>[] validators)
+        params Func<T, Error?>[] rules)
     {
-        if (validators is null)
-            throw new ArgumentNullException(nameof(validators));
+        if (rules is null)
+            throw new ArgumentNullException(nameof(rules));
 
-        foreach (Func<T, Operation<T>> validate in validators)
+        if (op is Operation<T>.Failure f)
+            return f;
+
+        T value = ((Operation<T>.Success)op).Result;
+
+        foreach (Func<T, Error?> rule in rules)
         {
-            if (op is Operation<T>.Failure)
-                return op;
-
-            op = validate(((Operation<T>.Success)op).Result);
+            Error? error = rule(value);
+            if (error is not null)
+                return new Operation<T>.Failure(error);
         }
 
         return op;
@@ -115,20 +119,23 @@ public static class OperationValidationExtensions
 
     public static async Task<Operation<T>> ValidateAsync<T>(
         this Task<Operation<T>> opTask,
-        params Func<T, Task<Operation<T>>>[] validators)
+        params Func<T, Task<Error?>>[] rules)
     {
-        if (validators is null)
-            throw new ArgumentNullException(nameof(validators));
+        if (rules is null)
+            throw new ArgumentNullException(nameof(rules));
 
         Operation<T> op = await opTask.ConfigureAwait(false);
 
-        foreach (Func<T, Task<Operation<T>>> validateAsync in validators)
-        {
-            if (op is Operation<T>.Failure)
-                return op;
+        if (op is Operation<T>.Failure f)
+            return f;
 
-            op = await validateAsync(((Operation<T>.Success)op).Result)
-                .ConfigureAwait(false);
+        T value = ((Operation<T>.Success)op).Result;
+
+        foreach (Func<T, Task<Error?>> ruleAsync in rules)
+        {
+            Error? error = await ruleAsync(value).ConfigureAwait(false);
+            if (error is not null)
+                return new Operation<T>.Failure(error);
         }
 
         return op;
@@ -141,22 +148,22 @@ public static class OperationValidationExtensions
 
     public static Operation<T> ValidateAll<T>(
         this Operation<T> op,
-        params Func<T, Operation<T>>[] validators)
+        params Func<T, Error?>[] rules)
     {
-        if (validators is null)
-            throw new ArgumentNullException(nameof(validators));
+        if (rules is null)
+            throw new ArgumentNullException(nameof(rules));
 
         if (op is Operation<T>.Failure f)
             return f;
 
         T value = ((Operation<T>.Success)op).Result;
-        List<Error> errors = new List<Error>();
+        List<Error> errors = new();
 
-        foreach (Func<T, Operation<T>> validate in validators)
+        foreach (Func<T, Error?> rule in rules)
         {
-            Operation<T> result = validate(value);
-            if (result is Operation<T>.Failure vf)
-                errors.Add(vf.Error);
+            Error? error = rule(value);
+            if (error is not null)
+                errors.Add(error);
         }
 
         return errors.Count switch
@@ -164,11 +171,11 @@ public static class OperationValidationExtensions
             0 => op,
             1 => new Operation<T>.Failure(errors[0]),
             _ => new Operation<T>.Failure(
-                    new Error.Validation(
-                        "Multiple validation errors",
-                        errors.Select(e => e.ToString()).ToList()
-                    )
-                 )
+                new Error.Validation(
+                    "Multiple validation errors",
+                    errors.Select(e => e.ToString()).ToList()
+                )
+            )
         };
     }
 
@@ -179,24 +186,25 @@ public static class OperationValidationExtensions
 
     public static async Task<Operation<T>> ValidateAllAsync<T>(
         this Task<Operation<T>> opTask,
-        params Func<T, Task<Operation<T>>>[] validators)
+        params Func<T, Task<Error?>>[] rules)
     {
-        if (validators is null)
-            throw new ArgumentNullException(nameof(validators));
+        if (rules is null)
+            throw new ArgumentNullException(nameof(rules));
 
         Operation<T> op = await opTask.ConfigureAwait(false);
 
+        // If the incoming operation is already a failure, return it unchanged
         if (op is Operation<T>.Failure f)
             return f;
 
         T value = ((Operation<T>.Success)op).Result;
-        List<Error> errors = new List<Error>();
+        List<Error> errors = new();
 
-        foreach (Func<T, Task<Operation<T>>> validateAsync in validators)
+        foreach (Func<T, Task<Error?>> ruleAsync in rules)
         {
-            Operation<T> result = await validateAsync(value).ConfigureAwait(false);
-            if (result is Operation<T>.Failure vf)
-                errors.Add(vf.Error);
+            Error? error = await ruleAsync(value).ConfigureAwait(false);
+            if (error is not null)
+                errors.Add(error);
         }
 
         return errors.Count switch
@@ -204,11 +212,11 @@ public static class OperationValidationExtensions
             0 => op,
             1 => new Operation<T>.Failure(errors[0]),
             _ => new Operation<T>.Failure(
-                    new Error.Validation(
-                        "Multiple validation errors",
-                        errors.Select(e => e.ToString()).ToList()
-                    )
-                 )
+                new Error.Validation(
+                    "Multiple validation errors",
+                    errors.Select(e => e.ToString()).ToList()
+                )
+            )
         };
     }
 

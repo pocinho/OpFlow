@@ -166,4 +166,12 @@ public static class OperationLinqExtensions
         };
     }
 
+    /// <summary>
+    /// Wraps a synchronous Operation in a Task, allowing it to be used in async contexts without blocking.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="op"></param>
+    /// <returns></returns>
+    public static Task<Operation<T>> AsTask<T>(this Operation<T> op)
+        => Task.FromResult(op);
 }
