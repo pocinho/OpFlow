@@ -180,10 +180,13 @@ public static class OperationExtensions
     // 5. Bind (monadic composition)
     // ------------------------------------------------------------
 
-    public static Operation<TResult> Bind<T, TResult>(
-        this Operation<T> op,
+    // Async versions
+    public static async Task<Operation<TResult>> BindAsync<T, TResult>(
+        this Task<Operation<T>> opTask,
         Func<T, Operation<TResult>> bind)
     {
+        Operation<T> op = await opTask.ConfigureAwait(false);
+
         return op switch
         {
             Operation<T>.Success s => bind(s.Result),
@@ -192,7 +195,18 @@ public static class OperationExtensions
         };
     }
 
-    // Async versions
+    public static async Task<Operation<TResult>> BindAsync<T, TResult>(
+        this Operation<T> op,
+        Func<T, Task<Operation<TResult>>> bindAsync)
+    {
+        return op switch
+        {
+            Operation<T>.Success s => await bindAsync(s.Result),
+            Operation<T>.Failure f => new Operation<TResult>.Failure(f.Error),
+            _ => throw new InvalidOperationException("Unknown Operation state.")
+        };
+    }
+
     public static async Task<Operation<TResult>> BindAsync<T, TResult>(
         this Task<Operation<T>> opTask,
         Func<T, Task<Operation<TResult>>> bindAsync)
@@ -242,44 +256,6 @@ public static class OperationExtensions
     // 7. Match (functional branching)
     // ------------------------------------------------------------
 
-    public static TResult Match<T, TResult>(
-        this Operation<T> op,
-        Func<T, TResult> onSuccess,
-        Func<Error, TResult> onFailure)
-    {
-        return op switch
-        {
-            Operation<T>.Success s => onSuccess(s.Result),
-            Operation<T>.Failure f => onFailure(f.Error),
-            _ => throw new InvalidOperationException("Unknown Operation state.")
-        };
-    }
-
-    public static void Match<T>(
-        this Operation<T> op,
-        Action<T> onSuccess,
-        Action<Error> onFailure)
-    {
-        if (onSuccess is null)
-            throw new ArgumentNullException(nameof(onSuccess));
-        if (onFailure is null)
-            throw new ArgumentNullException(nameof(onFailure));
-
-        switch (op)
-        {
-            case Operation<T>.Success s:
-                onSuccess(s.Result);
-                break;
-
-            case Operation<T>.Failure f:
-                onFailure(f.Error);
-                break;
-
-            default:
-                throw new InvalidOperationException("Unknown Operation state.");
-        }
-    }
-
     public static async Task<TResult> MatchAsync<T, TResult>(
         this Task<Operation<T>> opTask,
         Func<T, Task<TResult>> onSuccess,
@@ -293,27 +269,5 @@ public static class OperationExtensions
             Operation<T>.Failure f => await onFailure(f.Error),
             _ => throw new InvalidOperationException("Unknown Operation state.")
         };
-    }
-
-    public static async Task MatchAsync<T>(
-        this Task<Operation<T>> opTask,
-        Func<T, Task> onSuccess,
-        Func<Error, Task> onFailure)
-    {
-        Operation<T> op = await opTask.ConfigureAwait(false);
-
-        switch (op)
-        {
-            case Operation<T>.Success s:
-                await onSuccess(s.Result);
-                break;
-
-            case Operation<T>.Failure f:
-                await onFailure(f.Error);
-                break;
-
-            default:
-                throw new InvalidOperationException("Unknown Operation state.");
-        }
     }
 }

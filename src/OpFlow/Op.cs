@@ -429,29 +429,11 @@ public static class Op
         => op.Match(onSuccess, onFailure);
 
     /// <summary>
-    /// Pattern-matches the operation, executing an action based on success or failure.
-    /// </summary>
-    public static void Match<T>(
-        Operation<T> op,
-        Action<T> onSuccess,
-        Action<Error> onFailure)
-        => op.Match(onSuccess, onFailure);
-
-    /// <summary>
     /// Asynchronous version of <see cref="Match{T, TResult}(Operation{T}, Func{T, TResult}, Func{Error, TResult})"/>.
     /// </summary>
     public static Task<TResult> MatchAsync<T, TResult>(
         Task<Operation<T>> op,
         Func<T, Task<TResult>> onSuccess,
         Func<Error, Task<TResult>> onFailure)
-        => op.MatchAsync(onSuccess, onFailure);
-
-    /// <summary>
-    /// Asynchronous version of <see cref="Match{T}(Operation{T}, Action{T}, Action{Error})"/>.
-    /// </summary>
-    public static Task MatchAsync<T>(
-        Task<Operation<T>> op,
-        Func<T, Task> onSuccess,
-        Func<Error, Task> onFailure)
         => op.MatchAsync(onSuccess, onFailure);
 }
