@@ -86,14 +86,14 @@ internal static class UnionParser
 
             if (ctor is not null)
             {
-                foreach (IParameterSymbol parameter in ctor.Parameters)
+                foreach (IPropertySymbol property in nested.GetMembers().OfType<IPropertySymbol>())
                 {
-                    string typeName = parameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                    string typeName = property.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
                     fields.Add(new CaseField(
-                        Name: parameter.Name,
+                        Name: property.Name,
                         Type: typeName,
-                        TypeSymbol: parameter.Type
+                        TypeSymbol: property.Type
                     ));
                 }
             }

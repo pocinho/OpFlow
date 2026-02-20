@@ -64,6 +64,8 @@ public static class OperationParallelExtensions
         Task<Operation<T1>> op1Task,
         Task<Operation<T2>> op2Task)
     {
+        await Task.WhenAll(op1Task, op2Task).ConfigureAwait(false);
+
         Operation<T1> op1 = await op1Task.ConfigureAwait(false);
         Operation<T2> op2 = await op2Task.ConfigureAwait(false);
 
@@ -74,8 +76,7 @@ public static class OperationParallelExtensions
             return new Operation<(T1, T2)>.Failure(f2.Error);
 
         return new Operation<(T1, T2)>.Success(
-            (Get(op1), Get(op2))
-        );
+            (Get(op1), Get(op2)));
     }
 
     public static async Task<Operation<(T1, T2, T3)>> WhenAllAsync<T1, T2, T3>(
@@ -83,6 +84,8 @@ public static class OperationParallelExtensions
         Task<Operation<T2>> op2Task,
         Task<Operation<T3>> op3Task)
     {
+        await Task.WhenAll(op1Task, op2Task, op3Task).ConfigureAwait(false);
+
         Operation<T1> op1 = await op1Task.ConfigureAwait(false);
         Operation<T2> op2 = await op2Task.ConfigureAwait(false);
         Operation<T3> op3 = await op3Task.ConfigureAwait(false);

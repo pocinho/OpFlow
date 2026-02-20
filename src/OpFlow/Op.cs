@@ -1,25 +1,26 @@
 ﻿// Copyright (c) 2026 Paulo Pocinho.
 
-namespace OpFlow;
-
-using System;
-using System.Threading.Tasks;
 using OpFlow.Extensions;
 
+namespace OpFlow;
+
 /// <summary>
-/// Provides a unified, discoverable facade for creating and composing <see cref="Operation{T}"/> values.
-/// This class exposes all core OpFlow features, including creation, validation, mapping,
-/// binding, parallel composition, LINQ support, and error handling.
+/// The Op facade is the recommended entry point for creating and validating
+/// <see cref="Operation{T}"/> values. It intentionally exposes only:
+/// 
+/// • Creation helpers (Success, Failure, From, Try)
+/// • Boundary helpers (FromAsync, FromException, FromNullable)
+/// • Validation helpers (Ensure, Require, Validate, ValidateAll)
+/// • Parallel composition (WhenAll)
+/// 
+/// All core monadic operators (Map, Bind, Tap, Recover, Match, etc.)
+/// are defined exclusively on <see cref="Operation"/> to avoid duplication
+/// and ensure a single canonical implementation.
 /// </summary>
-/// <remarks>
-/// The <c>Op</c> facade is the recommended entry point for most OpFlow usage.
-/// It wraps both extension methods and generated <c>Operation</c> helpers,
-/// offering a clean and expressive API.
-/// </remarks>
 public static class Op
 {
     // ------------------------------------------------------------
-    // 0. Creation
+    // 0. Creation / Boundary
     // ------------------------------------------------------------
 
     /// <summary>
@@ -169,7 +170,7 @@ public static class Op
 
 
     // ------------------------------------------------------------
-    // 2. Validation
+    // 2. Validation (domain-level sugar)
     // ------------------------------------------------------------
 
     /// <summary>
@@ -240,200 +241,4 @@ public static class Op
         Task<Operation<T>> op,
         params Func<T, Task<Error?>>[] rules)
         => op.ValidateAllAsync(rules);
-
-
-    // ------------------------------------------------------------
-    // 3. LINQ / Monad
-    // ------------------------------------------------------------
-
-    /// <summary>
-    /// Maps a successful value using the specified selector.
-    /// </summary>
-    /// <remarks>
-    /// Equivalent to <see cref="Op.Select{T, TResult}(Operation{T}, Func{T, TResult})"/>.
-    /// </remarks>
-    public static Operation<TResult> Select<T, TResult>(
-        Operation<T> op,
-        Func<T, TResult> selector)
-        => op.Select(selector);
-
-    /// <summary>
-    /// Asynchronous version of <see cref="Op.Select{T, TResult}(Operation{T}, Func{T, TResult})"/>.
-    /// </summary>
-    public static Task<Operation<TResult>> SelectAsync<T, TResult>(
-        Task<Operation<T>> op,
-        Func<T, Task<TResult>> selector)
-        => op.SelectAsync(selector);
-
-    /// <summary>
-    /// Chains two operations and projects their results.
-    /// </summary>
-    /// <remarks>
-    /// Equivalent to <see cref="Op.SelectMany{T, TIntermediate, TResult}(Operation{T}, Func{T, Operation{TIntermediate}}, Func{T, TIntermediate, TResult})"/>.
-    /// </remarks>
-    public static Operation<TResult> SelectMany<T, TIntermediate, TResult>(
-        Operation<T> op,
-        Func<T, Operation<TIntermediate>> bind,
-        Func<T, TIntermediate, TResult> project)
-        => op.SelectMany(bind, project);
-
-    /// <summary>
-    /// Asynchronous version of <see cref="Op.SelectMany{T, TIntermediate, TResult}(Operation{T}, Func{T, Operation{TIntermediate}}, Func{T, TIntermediate, TResult})"/>.
-    /// </summary>
-    public static Task<Operation<TResult>> SelectManyAsync<T, TIntermediate, TResult>(
-        Task<Operation<T>> op,
-        Func<T, Task<Operation<TIntermediate>>> bindAsync,
-        Func<T, TIntermediate, TResult> project)
-        => op.SelectManyAsync(bindAsync, project);
-
-    /// <summary>
-    /// LINQ-friendly async SelectMany wrapper.
-    /// </summary>
-    public static Task<Operation<TResult>> SelectMany<T, TIntermediate, TResult>(
-        this Task<Operation<T>> opTask,
-        Func<T, Task<Operation<TIntermediate>>> bindAsync,
-        Func<T, TIntermediate, TResult> project)
-        => SelectManyAsync(opTask, bindAsync, project);
-
-    /// <summary>
-    /// LINQ-friendly async Select wrapper.
-    /// </summary>
-    public static Task<Operation<TResult>> Select<T, TResult>(
-        this Task<Operation<T>> opTask,
-        Func<T, TResult> selector)
-        => opTask.SelectAsync(x => Task.FromResult(selector(x)));
-
-
-    // ------------------------------------------------------------
-    // 4. Map / Bind
-    // ------------------------------------------------------------
-
-    /// <summary>
-    /// Maps a successful value to another value.
-    /// </summary>
-    public static Operation<TResult> Map<T, TResult>(
-        Operation<T> op,
-        Func<T, TResult> map)
-        => op.Map(map);
-
-    /// <summary>
-    /// Asynchronous version of <see cref="Map{T, TResult}(Operation{T}, Func{T, TResult})"/>.
-    /// </summary>
-    public static Task<Operation<TResult>> MapAsync<T, TResult>(
-        Task<Operation<T>> op,
-        Func<T, Task<TResult>> mapAsync)
-        => op.MapAsync(mapAsync);
-
-    /// <summary>
-    /// Chains two operations.
-    /// </summary>
-    public static Operation<TResult> Bind<T, TResult>(
-        Operation<T> op,
-        Func<T, Operation<TResult>> bind)
-        => op.Bind(bind);
-
-    /// <summary>
-    /// Asynchronous version of <see cref="Bind{T, TResult}(Operation{T}, Func{T, Operation{TResult}})"/>.
-    /// </summary>
-    public static Task<Operation<TResult>> BindAsync<T, TResult>(
-        Task<Operation<T>> op,
-        Func<T, Task<Operation<TResult>>> bindAsync)
-        => op.BindAsync(bindAsync);
-
-
-    // ------------------------------------------------------------
-    // 5. Tap / OnSuccess / OnFailure
-    // ------------------------------------------------------------
-
-    /// <summary>
-    /// Executes a side effect when the operation succeeds.
-    /// </summary>
-    public static Operation<T> Tap<T>(
-        Operation<T> op,
-        Action<T> action)
-        => op.Tap(action);
-
-    /// <summary>
-    /// Executes a side effect when the operation fails.
-    /// </summary>
-    public static Operation<T> TapError<T>(
-        Operation<T> op,
-        Action<Error> action)
-        => op.TapError(action);
-
-    /// <summary>
-    /// Asynchronous version of <see cref="Tap{T}(Operation{T}, Action{T})"/>.
-    /// </summary>
-    public static Task<Operation<T>> TapAsync<T>(
-        Task<Operation<T>> op,
-        Func<T, Task> actionAsync)
-        => op.TapAsync(actionAsync);
-
-    /// <summary>
-    /// Asynchronous version of <see cref="TapError{T}(Operation{T}, Action{Error})"/>.
-    /// </summary>
-    public static Task<Operation<T>> TapErrorAsync<T>(
-        Task<Operation<T>> op,
-        Func<Error, Task> actionAsync)
-        => op.TapErrorAsync(actionAsync);
-
-    /// <summary>
-    /// Executes an action when the operation succeeds.
-    /// </summary>
-    public static Operation<T> OnSuccess<T>(
-        Operation<T> op,
-        Action<T> action)
-        => op.OnSuccess(action);
-
-    /// <summary>
-    /// Executes an action when the operation fails.
-    /// </summary>
-    public static Operation<T> OnFailure<T>(
-        Operation<T> op,
-        Action<Error> action)
-        => op.OnFailure(action);
-
-
-    // ------------------------------------------------------------
-    // 6. Recover
-    // ------------------------------------------------------------
-
-    /// <summary>
-    /// Provides a fallback value when the operation fails.
-    /// </summary>
-    public static Operation<T> Recover<T>(
-        Operation<T> op,
-        Func<Error, T> fallback)
-        => op.Recover(fallback);
-
-    /// <summary>
-    /// Asynchronous version of <see cref="Recover{T}(Operation{T}, Func{Error, T})"/>.
-    /// </summary>
-    public static Task<Operation<T>> RecoverAsync<T>(
-        Task<Operation<T>> op,
-        Func<Error, Task<T>> fallbackAsync)
-        => op.RecoverAsync(fallbackAsync);
-
-
-    // ------------------------------------------------------------
-    // 7. Match
-    // ------------------------------------------------------------
-
-    /// <summary>
-    /// Pattern-matches the operation, returning a value based on success or failure.
-    /// </summary>
-    public static TResult Match<T, TResult>(
-        Operation<T> op,
-        Func<T, TResult> onSuccess,
-        Func<Error, TResult> onFailure)
-        => op.Match(onSuccess, onFailure);
-
-    /// <summary>
-    /// Asynchronous version of <see cref="Match{T, TResult}(Operation{T}, Func{T, TResult}, Func{Error, TResult})"/>.
-    /// </summary>
-    public static Task<TResult> MatchAsync<T, TResult>(
-        Task<Operation<T>> op,
-        Func<T, Task<TResult>> onSuccess,
-        Func<Error, Task<TResult>> onFailure)
-        => op.MatchAsync(onSuccess, onFailure);
 }

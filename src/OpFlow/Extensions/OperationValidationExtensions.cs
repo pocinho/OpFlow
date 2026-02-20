@@ -173,10 +173,47 @@ public static class OperationValidationExtensions
             _ => new Operation<T>.Failure(
                 new Error.Validation(
                     "Multiple validation errors",
-                    errors.Select(e => e.ToString()).ToList()
+                    CollectFields(errors)
                 )
             )
         };
+    }
+
+    private static IReadOnlyList<string> CollectFields(IReadOnlyList<Error> errors)
+    {
+        List<string> fields = new();
+
+        foreach (Error e in errors)
+        {
+            switch (e)
+            {
+                case Error.Validation v when v.Fields is { Count: > 0 }:
+                    fields.AddRange(v.Fields);
+                    break;
+
+                case Error.Validation v:
+                    fields.Add(v.Message);
+                    break;
+
+                case Error.NotFound n:
+                    fields.Add(n.Message);
+                    break;
+
+                case Error.Unauthorized u:
+                    fields.Add(u.Message);
+                    break;
+
+                case Error.Unexpected x:
+                    fields.Add(x.Message);
+                    break;
+
+                default:
+                    fields.Add(e.ToString());
+                    break;
+            }
+        }
+
+        return fields;
     }
 
 
@@ -193,7 +230,6 @@ public static class OperationValidationExtensions
 
         Operation<T> op = await opTask.ConfigureAwait(false);
 
-        // If the incoming operation is already a failure, return it unchanged
         if (op is Operation<T>.Failure f)
             return f;
 
@@ -214,7 +250,7 @@ public static class OperationValidationExtensions
             _ => new Operation<T>.Failure(
                 new Error.Validation(
                     "Multiple validation errors",
-                    errors.Select(e => e.ToString()).ToList()
+                    CollectFields(errors)
                 )
             )
         };

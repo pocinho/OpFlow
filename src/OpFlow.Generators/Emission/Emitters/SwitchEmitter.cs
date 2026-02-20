@@ -46,7 +46,7 @@ internal sealed class SwitchEmitter : IOperationEmitter
     }
 
     // ---------------------------------------------------------------------
-    // Switch<T>(Action<T>, Action<ErrorType>)
+    // Switch<T>(Action<T>, Action<ErrorType>) : Operation<T>
     // ---------------------------------------------------------------------
     private static void EmitSwitch(CodeWriter w, OperationModel op)
     {
@@ -57,7 +57,7 @@ internal sealed class SwitchEmitter : IOperationEmitter
         string errorField = op.ErrorField.Name;
         string errorType = op.ErrorField.Type;
 
-        w.WriteLine("public static void Switch<T>(");
+        w.WriteLine("public static Operation<T> Switch<T>(");
         w.Indent();
         w.WriteLine("this Operation<T> op,");
         w.WriteLine("Action<T> onSuccess,");
@@ -65,6 +65,11 @@ internal sealed class SwitchEmitter : IOperationEmitter
         w.Unindent();
         w.WriteLine("{");
         w.Indent();
+
+        // Null guards
+        w.WriteLine("if (onSuccess is null) throw new ArgumentNullException(nameof(onSuccess));");
+        w.WriteLine("if (onFailure is null) throw new ArgumentNullException(nameof(onFailure));");
+        w.WriteLine();
 
         w.WriteLine("switch (op)");
         w.WriteLine("{");
@@ -74,7 +79,7 @@ internal sealed class SwitchEmitter : IOperationEmitter
         w.WriteLine($"case {success} s:");
         w.Indent();
         w.WriteLine($"onSuccess(s.{resultField});");
-        w.WriteLine("return;");
+        w.WriteLine("return op;");
         w.Unindent();
         w.WriteLine();
 
@@ -82,11 +87,11 @@ internal sealed class SwitchEmitter : IOperationEmitter
         w.WriteLine($"case {failure} f:");
         w.Indent();
         w.WriteLine($"onFailure(f.{errorField});");
-        w.WriteLine("return;");
+        w.WriteLine("return op;");
         w.Unindent();
         w.WriteLine();
 
-        // Default
+        // Default (defensive)
         w.WriteLine("default:");
         w.Indent();
         w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");

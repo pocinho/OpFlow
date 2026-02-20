@@ -19,26 +19,27 @@ public abstract partial record Operation<T>
     /// <summary>
     /// Successful outcome of an operation, containing the result of type T.
     /// </summary>
-    /// <param name="Result"></param>
-    public sealed partial record Success(T Result) : Operation<T>
+    public sealed partial record Success : Operation<T>
     {
+        public T Result { get; }
+
+        internal Success(T result) => Result = result;
+
         public override string ToString() => $"Success: {Result}";
     }
 
     /// <summary>
     /// Failed outcome of an operation, containing an error. The error can be created from an Error instance or an Exception.
     /// </summary>
-    /// <param name="Error"></param>
-    public sealed partial record Failure(Error Error) : Operation<T>
+    public sealed partial record Failure : Operation<T>
     {
+        public Error Error { get; }
+
+        internal Failure(Error error) => Error = error;
+
         public override string ToString() => $"Failure: {Error}";
     }
 
-    public static implicit operator Operation<T>(Error error)
-        => new Failure(error);
-
-    public static implicit operator Operation<T>(Exception ex)
-        => new Failure(new Error.Unexpected(ex.Message, ex));
 
     public override string ToString()
     {
