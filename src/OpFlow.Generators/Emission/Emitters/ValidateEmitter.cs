@@ -40,104 +40,201 @@ internal sealed class ValidateEmitter : IOperationEmitter
         w.WriteLine("{");
         w.Indent();
 
-        EmitValidate(w, op);
+        EmitValidateMessage(w, op);
         w.WriteLine();
-        EmitValidateAsync(w, op);
+
+        EmitValidateFactory(w, op);
+        w.WriteLine();
+
+        EmitValidateAsyncMessage(w, op);
+        w.WriteLine();
+
+        EmitValidateAsyncFactory(w, op);
 
         w.Unindent();
         w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // Validate<T>(Operation<T>, Func<T, bool>, Func<T, Error>)
+    // Validate<T>(predicate, message, fields)
     // ---------------------------------------------------------------------
-    private static void EmitValidate(CodeWriter w, OperationModel op)
+    private static void EmitValidateMessage(CodeWriter w, OperationModel op)
     {
         string success = op.SuccessCaseFQN;
         string failure = op.FailureCaseFQN;
-        string resultField = op.ResultField.Name; // "Result"
-        string errorField = op.ErrorField.Name;   // "Error"
-        string errorType = op.ErrorField.Type;
 
-        w.WriteLine("/// <summary>");
-        w.WriteLine("/// Validates a successful operation using a predicate, producing an error when validation fails.");
-        w.WriteLine("/// </summary>");
-        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
-        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
-        w.WriteLine("/// <param name=\"predicate\">The predicate to validate the successful result.</param>");
-        w.WriteLine("/// <param name=\"errorFactory\">The function that produces an error when validation fails.</param>");
-        w.WriteLine("/// <returns>The original success, a validation failure, or the original failure.</returns>");
         w.WriteLine("public static Operation<T> Validate<T>(");
         w.Indent();
         w.WriteLine("this Operation<T> op,");
         w.WriteLine("Func<T, bool> predicate,");
-        w.WriteLine($"Func<T, {errorType}> errorFactory)");
+        w.WriteLine("string message,");
+        w.WriteLine("params string[] fields)");
         w.Unindent();
         w.WriteLine("{");
         w.Indent();
+
         w.WriteLine("if (predicate is null) throw new ArgumentNullException(nameof(predicate));");
-        w.WriteLine("if (errorFactory is null) throw new ArgumentNullException(nameof(errorFactory));");
+        w.WriteLine("if (message is null) throw new ArgumentNullException(nameof(message));");
+        w.WriteLine("if (fields is null) throw new ArgumentNullException(nameof(fields));");
         w.WriteLine();
-        w.WriteLine("return op switch");
+
+        w.WriteLine("switch (op)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine($"{success} s => predicate(s.{resultField})");
+
+        w.WriteLine($"case {success} s:");
         w.Indent();
-        w.WriteLine("? op");
-        w.WriteLine($": FailureOf<T>(errorFactory(s.{resultField})),");
+        w.WriteLine("if (predicate(s.Result)) return s;");
+        w.WriteLine("return new Operation<T>.Failure(new Error.Validation(message, fields));");
         w.Unindent();
-        w.WriteLine($"{failure} f => FailureOf<T>(f.{errorField}),");
-        w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
+
+        w.WriteLine($"case {failure} f:");
+        w.Indent();
+        w.WriteLine("return f;");
         w.Unindent();
-        w.WriteLine("};");
+
+        w.WriteLine("default: throw new InvalidOperationException();");
+
+        w.Unindent();
+        w.WriteLine("}");
+
         w.Unindent();
         w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // ValidateAsync<T>(Task<Operation<T>>, Func<T, Task<bool>>, Func<T, Error>)
+    // Validate<T>(predicate, errorFactory)
     // ---------------------------------------------------------------------
-    private static void EmitValidateAsync(CodeWriter w, OperationModel op)
+    private static void EmitValidateFactory(CodeWriter w, OperationModel op)
     {
         string success = op.SuccessCaseFQN;
         string failure = op.FailureCaseFQN;
-        string resultField = op.ResultField.Name;
-        string errorField = op.ErrorField.Name;
-        string errorType = op.ErrorField.Type;
 
-        w.WriteLine("/// <summary>");
-        w.WriteLine("/// Asynchronously validates a successful operation using a predicate, producing an error when validation fails.");
-        w.WriteLine("/// </summary>");
-        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
-        w.WriteLine("/// <param name=\"opTask\">The source operation task.</param>");
-        w.WriteLine("/// <param name=\"predicateAsync\">The async predicate to validate the successful result.</param>");
-        w.WriteLine("/// <param name=\"errorFactory\">The function that produces an error when validation fails.</param>");
-        w.WriteLine("/// <returns>A task producing the validated operation or a failure.</returns>");
-        w.WriteLine("public static async Task<Operation<T>> ValidateAsync<T>(");
+        w.WriteLine("public static Operation<T> Validate<T>(");
         w.Indent();
-        w.WriteLine("this Task<Operation<T>> opTask,");
-        w.WriteLine($"Func<T, Task<bool>> predicateAsync,");
-        w.WriteLine($"Func<T, {errorType}> errorFactory)");
+        w.WriteLine("this Operation<T> op,");
+        w.WriteLine("Func<T, bool> predicate,");
+        w.WriteLine("Func<T, Error> errorFactory)");
         w.Unindent();
         w.WriteLine("{");
         w.Indent();
+
+        w.WriteLine("if (predicate is null) throw new ArgumentNullException(nameof(predicate));");
+        w.WriteLine("if (errorFactory is null) throw new ArgumentNullException(nameof(errorFactory));");
+        w.WriteLine();
+
+        w.WriteLine("switch (op)");
+        w.WriteLine("{");
+        w.Indent();
+
+        w.WriteLine($"case {success} s:");
+        w.Indent();
+        w.WriteLine("if (predicate(s.Result)) return s;");
+        w.WriteLine("return new Operation<T>.Failure(errorFactory(s.Result));");
+        w.Unindent();
+
+        w.WriteLine($"case {failure} f:");
+        w.Indent();
+        w.WriteLine("return f;");
+        w.Unindent();
+
+        w.WriteLine("default: throw new InvalidOperationException();");
+
+        w.Unindent();
+        w.WriteLine("}");
+
+        w.Unindent();
+        w.WriteLine("}");
+    }
+
+    // ---------------------------------------------------------------------
+    // ValidateAsync<T>(predicateAsync, message, fields)
+    // ---------------------------------------------------------------------
+    private static void EmitValidateAsyncMessage(CodeWriter w, OperationModel op)
+    {
+        string success = op.SuccessCaseFQN;
+        string failure = op.FailureCaseFQN;
+
+        w.WriteLine("public static async Task<Operation<T>> ValidateAsync<T>(");
+        w.Indent();
+        w.WriteLine("this Operation<T> op,");
+        w.WriteLine("Func<T, Task<bool>> predicateAsync,");
+        w.WriteLine("string message,");
+        w.WriteLine("params string[] fields)");
+        w.Unindent();
+        w.WriteLine("{");
+        w.Indent();
+
+        w.WriteLine("if (predicateAsync is null) throw new ArgumentNullException(nameof(predicateAsync));");
+        w.WriteLine("if (message is null) throw new ArgumentNullException(nameof(message));");
+        w.WriteLine("if (fields is null) throw new ArgumentNullException(nameof(fields));");
+        w.WriteLine();
+
+        w.WriteLine("switch (op)");
+        w.WriteLine("{");
+        w.Indent();
+
+        w.WriteLine($"case {success} s:");
+        w.Indent();
+        w.WriteLine("if (await predicateAsync(s.Result).ConfigureAwait(false)) return s;");
+        w.WriteLine("return new Operation<T>.Failure(new Error.Validation(message, fields));");
+        w.Unindent();
+
+        w.WriteLine($"case {failure} f:");
+        w.Indent();
+        w.WriteLine("return f;");
+        w.Unindent();
+
+        w.WriteLine("default: throw new InvalidOperationException();");
+
+        w.Unindent();
+        w.WriteLine("}");
+
+        w.Unindent();
+        w.WriteLine("}");
+    }
+
+    // ---------------------------------------------------------------------
+    // ValidateAsync<T>(predicateAsync, errorFactory)
+    // ---------------------------------------------------------------------
+    private static void EmitValidateAsyncFactory(CodeWriter w, OperationModel op)
+    {
+        string success = op.SuccessCaseFQN;
+        string failure = op.FailureCaseFQN;
+
+        w.WriteLine("public static async Task<Operation<T>> ValidateAsync<T>(");
+        w.Indent();
+        w.WriteLine("this Operation<T> op,");
+        w.WriteLine("Func<T, Task<bool>> predicateAsync,");
+        w.WriteLine("Func<T, Error> errorFactory)");
+        w.Unindent();
+        w.WriteLine("{");
+        w.Indent();
+
         w.WriteLine("if (predicateAsync is null) throw new ArgumentNullException(nameof(predicateAsync));");
         w.WriteLine("if (errorFactory is null) throw new ArgumentNullException(nameof(errorFactory));");
         w.WriteLine();
-        w.WriteLine("Operation<T> op = await opTask.ConfigureAwait(false);");
-        w.WriteLine();
-        w.WriteLine("return op switch");
+
+        w.WriteLine("switch (op)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine($"{success} s => await predicateAsync(s.{resultField}).ConfigureAwait(false)");
+
+        w.WriteLine($"case {success} s:");
         w.Indent();
-        w.WriteLine("? op");
-        w.WriteLine($": FailureOf<T>(errorFactory(s.{resultField})),");
+        w.WriteLine("if (await predicateAsync(s.Result).ConfigureAwait(false)) return s;");
+        w.WriteLine("return new Operation<T>.Failure(errorFactory(s.Result));");
         w.Unindent();
-        w.WriteLine($"{failure} f => FailureOf<T>(f.{errorField}),");
-        w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
+
+        w.WriteLine($"case {failure} f:");
+        w.Indent();
+        w.WriteLine("return f;");
         w.Unindent();
-        w.WriteLine("};");
+
+        w.WriteLine("default: throw new InvalidOperationException();");
+
+        w.Unindent();
+        w.WriteLine("}");
+
         w.Unindent();
         w.WriteLine("}");
     }

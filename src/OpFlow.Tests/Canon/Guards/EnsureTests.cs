@@ -5,176 +5,183 @@ namespace OpFlow.Tests.Canon.Guards;
 public class EnsureTests
 {
     // -------------------------------------------------------------
-    // Ensure<T>(Func<T, bool>, string)
+    // Ensure<T>(Func<T, bool>, Func<T, Error>)
     // -------------------------------------------------------------
     [Fact]
-    public void Ensure_WithMessage_ReturnsOriginal_WhenPredicateTrue()
+    public void Ensure_Success_PassesPredicate_ReturnsSuccess()
     {
         Operation<int> op = Operation.Success(10);
 
-        Operation<int> result = op.Ensure(x => x > 5, "too small");
+        Operation<int> result = op.Ensure(
+            predicate: x => x > 0,
+            errorFactory: _ => new Error.Validation("should-not-run")
+        );
 
-        Assert.Same(op, result);
+        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
+        Assert.Equal(10, success.Result);
     }
 
     [Fact]
-    public void Ensure_WithMessage_ReturnsValidationError_WhenPredicateFalse()
+    public void Ensure_Success_FailsPredicate_ReturnsFailure()
     {
-        Operation<int> op = Operation.Success(3);
+        Operation<int> op = Operation.Success(10);
 
-        Operation<int> result = op.Ensure(x => x > 5, "too small");
+        Operation<int> result = op.Ensure(
+            predicate: x => x < 0,
+            errorFactory: x => new Error.Validation($"invalid: {x}")
+        );
 
         Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
         Error.Validation validation = Assert.IsType<Error.Validation>(failure.Error);
 
-        Assert.Equal("too small", validation.Message);
-        Assert.Null(validation.Fields);
+        Assert.Equal("invalid: 10", validation.Message);
     }
 
     [Fact]
-    public void Ensure_WithMessage_DoesNotOverrideExistingFailure()
+    public void Ensure_Failure_DoesNotInvokePredicateOrFactory()
     {
         Error.NotFound error = new Error.NotFound("missing");
         Operation<int> op = Operation.FailureOf<int>(error);
 
-        Operation<int> result = op.Ensure(x => true, "ignored");
+        bool predicateInvoked = false;
+        bool factoryInvoked = false;
 
-        Assert.Same(op, result);
-    }
+        Operation<int> result = op.Ensure(
+            predicate: _ => { predicateInvoked = true; return true; },
+            errorFactory: _ => { factoryInvoked = true; return new Error.Validation("x"); }
+        );
 
-    // -------------------------------------------------------------
-    // Ensure<T>(Func<T, bool>, Error)
-    // -------------------------------------------------------------
-    [Fact]
-    public void Ensure_WithError_ReturnsOriginal_WhenPredicateTrue()
-    {
-        Operation<int> op = Operation.Success(10);
-        Error.Unauthorized custom = new Error.Unauthorized("nope");
-
-        Operation<int> result = op.Ensure(x => x > 5, custom);
-
-        Assert.Same(op, result);
-    }
-
-    [Fact]
-    public void Ensure_WithError_ReturnsProvidedError_WhenPredicateFalse()
-    {
-        Operation<int> op = Operation.Success(3);
-        Error.Unauthorized custom = new Error.Unauthorized("nope");
-
-        Operation<int> result = op.Ensure(x => x > 5, custom);
+        Assert.False(predicateInvoked);
+        Assert.False(factoryInvoked);
 
         Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
-        Assert.Equal(custom, failure.Error);
+        Assert.Equal(error, failure.Error);
     }
 
     [Fact]
-    public void Ensure_WithError_DoesNotOverrideExistingFailure()
+    public void Ensure_PredicateThrows_PropagatesException()
     {
-        Error.Validation error = new Error.Validation("bad");
-        Operation<int> op = Operation.FailureOf<int>(error);
+        Operation<int> op = Operation.Success(5);
 
-        Operation<int> result = op.Ensure(x => true, new Error.NotFound("ignored"));
+        Assert.Throws<InvalidOperationException>(() =>
+            op.Ensure(
+                predicate: _ => throw new InvalidOperationException("boom"),
+                errorFactory: _ => new Error.Validation("x")
+            )
+        );
+    }
 
-        Assert.Same(op, result);
+    [Fact]
+    public void Ensure_ErrorFactoryThrows_PropagatesException()
+    {
+        Operation<int> op = Operation.Success(5);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            op.Ensure(
+                predicate: _ => false,
+                errorFactory: _ => throw new InvalidOperationException("boom")
+            )
+        );
     }
 
     // -------------------------------------------------------------
-    // EnsureAsync<T>(Func<T, Task<bool>>, string)
+    // EnsureAsync<T>(Func<T, Task<bool>>, Func<T, Error>)
     // -------------------------------------------------------------
     [Fact]
-    public async Task EnsureAsync_WithMessage_ReturnsOriginal_WhenPredicateTrue()
+    public async Task EnsureAsync_Success_PassesPredicate_ReturnsSuccess()
     {
         Operation<int> op = Operation.Success(10);
 
-        Operation<int> result = await op.EnsureAsync(async x =>
-        {
-            await Task.Delay(1);
-            return x > 5;
-        }, "too small");
+        Operation<int> result = await op.EnsureAsync(
+            predicateAsync: async x =>
+            {
+                await Task.Delay(1);
+                return x > 0;
+            },
+            errorFactory: _ => new Error.Validation("should-not-run")
+        );
 
-        Assert.Same(op, result);
+        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
+        Assert.Equal(10, success.Result);
     }
 
     [Fact]
-    public async Task EnsureAsync_WithMessage_ReturnsValidationError_WhenPredicateFalse()
+    public async Task EnsureAsync_Success_FailsPredicate_ReturnsFailure()
     {
-        Operation<int> op = Operation.Success(3);
+        Operation<int> op = Operation.Success(10);
 
-        Operation<int> result = await op.EnsureAsync(async x =>
-        {
-            await Task.Delay(1);
-            return x > 5;
-        }, "too small");
+        Operation<int> result = await op.EnsureAsync(
+            predicateAsync: async x =>
+            {
+                await Task.Delay(1);
+                return x < 0;
+            },
+            errorFactory: x => new Error.Validation($"invalid: {x}")
+        );
 
         Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
         Error.Validation validation = Assert.IsType<Error.Validation>(failure.Error);
 
-        Assert.Equal("too small", validation.Message);
-        Assert.Null(validation.Fields);
+        Assert.Equal("invalid: 10", validation.Message);
     }
 
     [Fact]
-    public async Task EnsureAsync_WithMessage_DoesNotOverrideExistingFailure()
-    {
-        Error.Unexpected error = new Error.Unexpected("boom");
-        Operation<int> op = Operation.FailureOf<int>(error);
-
-        Operation<int> result = await op.EnsureAsync(async x =>
-        {
-            await Task.Delay(1);
-            return true;
-        }, "ignored");
-
-        Assert.Same(op, result);
-    }
-
-    // -------------------------------------------------------------
-    // EnsureAsync<T>(Func<T, Task<bool>>, Error)
-    // -------------------------------------------------------------
-    [Fact]
-    public async Task EnsureAsync_WithError_ReturnsOriginal_WhenPredicateTrue()
-    {
-        Operation<int> op = Operation.Success(10);
-        Error.Validation custom = new Error.Validation("bad");
-
-        Operation<int> result = await op.EnsureAsync(async x =>
-        {
-            await Task.Delay(1);
-            return x > 5;
-        }, custom);
-
-        Assert.Same(op, result);
-    }
-
-    [Fact]
-    public async Task EnsureAsync_WithError_ReturnsProvidedError_WhenPredicateFalse()
-    {
-        Operation<int> op = Operation.Success(3);
-        Error.Validation custom = new Error.Validation("bad");
-
-        Operation<int> result = await op.EnsureAsync(async x =>
-        {
-            await Task.Delay(1);
-            return x > 5;
-        }, custom);
-
-        Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
-        Assert.Equal(custom, failure.Error);
-    }
-
-    [Fact]
-    public async Task EnsureAsync_WithError_DoesNotOverrideExistingFailure()
+    public async Task EnsureAsync_Failure_DoesNotInvokePredicateOrFactory()
     {
         Error.NotFound error = new Error.NotFound("missing");
         Operation<int> op = Operation.FailureOf<int>(error);
 
-        Operation<int> result = await op.EnsureAsync(async x =>
-        {
-            await Task.Delay(1);
-            return true;
-        }, new Error.Validation("ignored"));
+        bool predicateInvoked = false;
+        bool factoryInvoked = false;
 
-        Assert.Same(op, result);
+        Operation<int> result = await op.EnsureAsync(
+            predicateAsync: async _ =>
+            {
+                predicateInvoked = true;
+                await Task.Delay(1);
+                return true;
+            },
+            errorFactory: _ =>
+            {
+                factoryInvoked = true;
+                return new Error.Validation("x");
+            }
+        );
+
+        Assert.False(predicateInvoked);
+        Assert.False(factoryInvoked);
+
+        Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
+        Assert.Equal(error, failure.Error);
+    }
+
+    [Fact]
+    public async Task EnsureAsync_PredicateThrows_PropagatesException()
+    {
+        Operation<int> op = Operation.Success(5);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            op.EnsureAsync(
+                predicateAsync: _ => throw new InvalidOperationException("boom"),
+                errorFactory: _ => new Error.Validation("x")
+            )
+        );
+    }
+
+    [Fact]
+    public async Task EnsureAsync_ErrorFactoryThrows_PropagatesException()
+    {
+        Operation<int> op = Operation.Success(5);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            op.EnsureAsync(
+                predicateAsync: async _ =>
+                {
+                    await Task.Delay(1);
+                    return false;
+                },
+                errorFactory: _ => throw new InvalidOperationException("boom")
+            )
+        );
     }
 }

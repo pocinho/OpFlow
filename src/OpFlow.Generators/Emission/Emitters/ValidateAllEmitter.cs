@@ -50,7 +50,7 @@ internal sealed class ValidateAllEmitter : IOperationEmitter
     }
 
     // ---------------------------------------------------------------------
-    // ValidateAll<T>(Operation<T>, IEnumerable<(Func<T, bool> predicate, Func<T, Error> errorFactory)>)
+    // ValidateAll<T>(Operation<T>, IEnumerable<(Func<T,bool>, Func<T,Error>)>)
     // ---------------------------------------------------------------------
     private static void EmitValidateAll(CodeWriter w, OperationModel op)
     {
@@ -63,21 +63,29 @@ internal sealed class ValidateAllEmitter : IOperationEmitter
         w.WriteLine("/// <summary>");
         w.WriteLine("/// Applies multiple validation rules to a successful operation, returning the first validation error encountered.");
         w.WriteLine("/// </summary>");
-        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
-        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
-        w.WriteLine("/// <param name=\"rules\">A sequence of validation rules, each consisting of a predicate and an error factory.</param>");
-        w.WriteLine("/// <returns>The original success if all rules pass, a validation failure, or the original failure.</returns>");
-        w.WriteLine($"public static Operation<T> ValidateAll<T>(this Operation<T> op, IEnumerable<(Func<T, bool> predicate, Func<T, {errorType}> errorFactory)> rules)");
-        w.WriteLine("{");
+        w.WriteLine("public static Operation<T> ValidateAll<T>(");
         w.Indent();
-        w.WriteLine("if (rules is null) throw new ArgumentNullException(nameof(rules));");
-        w.WriteLine();
-        w.WriteLine("return op switch");
+        w.WriteLine("this Operation<T> op,");
+        w.WriteLine($"IEnumerable<(Func<T, bool> predicate, Func<T, {errorType}> errorFactory)> rules)");
+        w.Unindent();
         w.WriteLine("{");
         w.Indent();
 
-        w.WriteLine($"{success} s =>");
+        w.WriteLine("if (rules is null) throw new ArgumentNullException(nameof(rules));");
+        w.WriteLine();
+
+        w.WriteLine("return op switch");
+        w.WriteLine("{");
         w.Indent();
+        w.WriteLine($"{success} s => Validate(s),");
+        w.WriteLine($"{failure} f => FailureOf<T>(f.{errorField}),");
+        w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
+        w.Unindent();
+        w.WriteLine("};");
+        w.WriteLine();
+
+        // Local function for multi-statement success arm
+        w.WriteLine($"Operation<T> Validate({success} s)");
         w.WriteLine("{");
         w.Indent();
         w.WriteLine("foreach (var (predicate, errorFactory) in rules)");
@@ -97,21 +105,14 @@ internal sealed class ValidateAllEmitter : IOperationEmitter
         w.WriteLine();
         w.WriteLine("return op;");
         w.Unindent();
-        w.WriteLine("},");
-        w.Unindent();
-
-        w.WriteLine($"{failure} f => FailureOf<T>(f.{errorField}),");
-        w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
-
-        w.Unindent();
-        w.WriteLine("};");
+        w.WriteLine("}");
 
         w.Unindent();
         w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // ValidateAllAsync<T>(Task<Operation<T>>, IEnumerable<(Func<T, Task<bool>>, Func<T, Error>)>)
+    // ValidateAllAsync<T>(Task<Operation<T>>, IEnumerable<(Func<T,Task<bool>>, Func<T,Error>)>)
     // ---------------------------------------------------------------------
     private static void EmitValidateAllAsync(CodeWriter w, OperationModel op)
     {
@@ -124,36 +125,31 @@ internal sealed class ValidateAllEmitter : IOperationEmitter
         w.WriteLine("/// <summary>");
         w.WriteLine("/// Asynchronously applies multiple validation rules to a successful operation, returning the first validation error encountered.");
         w.WriteLine("/// </summary>");
-        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
-        w.WriteLine("/// <param name=\"opTask\">The source operation task.</param>");
-        w.WriteLine("/// <param name=\"rules\">A sequence of async validation rules, each consisting of a predicate and an error factory.</param>");
-        w.WriteLine("/// <returns>A task producing the validated operation or a failure.</returns>");
-        w.WriteLine($"public static async Task<Operation<T>> ValidateAllAsync<T>(this Task<Operation<T>> opTask, IEnumerable<(Func<T, Task<bool>> predicateAsync, Func<T, {errorType}> errorFactory)> rules)");
+        w.WriteLine("public static async Task<Operation<T>> ValidateAllAsync<T>(");
+        w.Indent();
+        w.WriteLine("this Task<Operation<T>> opTask,");
+        w.WriteLine($"IEnumerable<(Func<T, Task<bool>> predicateAsync, Func<T, {errorType}> errorFactory)> rules)");
+        w.Unindent();
         w.WriteLine("{");
         w.Indent();
+
         w.WriteLine("if (rules is null) throw new ArgumentNullException(nameof(rules));");
         w.WriteLine();
         w.WriteLine("Operation<T> op = await opTask.ConfigureAwait(false);");
         w.WriteLine();
+
         w.WriteLine("return op switch");
         w.WriteLine("{");
         w.Indent();
-
-        w.WriteLine($"{success} s =>");
-        w.Indent();
-        w.WriteLine("await ValidateAsyncInternal(s).ConfigureAwait(false),");
-        w.Unindent();
-
+        w.WriteLine($"{success} s => await ValidateAsync(s).ConfigureAwait(false),");
         w.WriteLine($"{failure} f => FailureOf<T>(f.{errorField}),");
         w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
-
         w.Unindent();
         w.WriteLine("};");
         w.WriteLine();
-        w.WriteLine("async Task<Operation<T>> ValidateAsyncInternal(");
-        w.Indent();
-        w.WriteLine($"{success} s)");
-        w.Unindent();
+
+        // Local async validator
+        w.WriteLine($"async Task<Operation<T>> ValidateAsync({success} s)");
         w.WriteLine("{");
         w.Indent();
         w.WriteLine("foreach (var (predicateAsync, errorFactory) in rules)");

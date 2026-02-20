@@ -54,34 +54,4 @@ public static class OperationExtensions
             ? (true, f.Error)
             : (false, default!);
     }
-
-    // ------------------------------------------------------------
-    // 2. Tap (side-effects without changing the value)
-    // ------------------------------------------------------------
-
-
-    // Async versions
-    public static async Task<Operation<T>> TapAsync<T>(
-        this Task<Operation<T>> opTask,
-        Func<T, Task> actionAsync)
-    {
-        Operation<T> op = await opTask.ConfigureAwait(false);
-
-        if (op is Operation<T>.Success s)
-            await actionAsync(s.Result).ConfigureAwait(false);
-
-        return op;
-    }
-
-    public static async Task<Operation<T>> TapErrorAsync<T>(
-        this Task<Operation<T>> opTask,
-        Func<Error, Task> actionAsync)
-    {
-        Operation<T> op = await opTask.ConfigureAwait(false);
-
-        if (op is Operation<T>.Failure f)
-            await actionAsync(f.Error).ConfigureAwait(false);
-
-        return op;
-    }
 }

@@ -49,45 +49,61 @@ internal sealed class SwitchEmitter : IOperationEmitter
     }
 
     // ---------------------------------------------------------------------
-    // Switch<T, U>(Operation<T>, Func<T, Operation<U>>, Func<Error, Operation<U>>)
+    // Switch<T>(Action<T>, Action<Error>)
     // ---------------------------------------------------------------------
     private static void EmitSwitch(CodeWriter w, OperationModel op)
     {
         string success = op.SuccessCaseFQN;
         string failure = op.FailureCaseFQN;
-        string resultField = op.ResultField.Name; // "Result"
-        string errorField = op.ErrorField.Name;   // "Error"
-        string errorType = op.ErrorField.Type;
+        string resultField = op.ResultField.Name;
+        string errorField = op.ErrorField.Name;
 
         w.WriteLine("/// <summary>");
-        w.WriteLine("/// Branches on the operation, mapping success and failure into new operations.");
+        w.WriteLine("/// Executes one of two actions depending on whether the operation succeeded or failed.");
         w.WriteLine("/// </summary>");
-        w.WriteLine("/// <typeparam name=\"T\">The input result type.</typeparam>");
-        w.WriteLine("/// <typeparam name=\"U\">The resulting operation type.</typeparam>");
-        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
-        w.WriteLine("/// <param name=\"onSuccess\">The function to execute when the operation is a success.</param>");
-        w.WriteLine("/// <param name=\"onFailure\">The function to execute when the operation is a failure.</param>");
-        w.WriteLine("/// <returns>The resulting operation.</returns>");
-        w.WriteLine($"public static Operation<U> Switch<T, U>(this Operation<T> op, Func<T, Operation<U>> onSuccess, Func<{errorType}, Operation<U>> onFailure)");
+        w.WriteLine("public static void Switch<T>(");
+        w.Indent();
+        w.WriteLine("this Operation<T> op,");
+        w.WriteLine("Action<T> onSuccess,");
+        w.WriteLine("Action<Error> onFailure)");
+        w.Unindent();
         w.WriteLine("{");
         w.Indent();
+
         w.WriteLine("if (onSuccess is null) throw new ArgumentNullException(nameof(onSuccess));");
         w.WriteLine("if (onFailure is null) throw new ArgumentNullException(nameof(onFailure));");
         w.WriteLine();
-        w.WriteLine("return op switch");
+
+        w.WriteLine("switch (op)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine($"{success} s => onSuccess(s.{resultField}),");
-        w.WriteLine($"{failure} f => onFailure(f.{errorField}),");
-        w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
+
+        w.WriteLine($"case {success} s:");
+        w.Indent();
+        w.WriteLine($"onSuccess(s.{resultField});");
+        w.WriteLine("break;");
         w.Unindent();
-        w.WriteLine("};");
+
+        w.WriteLine($"case {failure} f:");
+        w.Indent();
+        w.WriteLine($"onFailure(f.{errorField});");
+        w.WriteLine("break;");
+        w.Unindent();
+
+        w.WriteLine("default:");
+        w.Indent();
+        w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
+        w.Unindent();
+
+        w.Unindent();
+        w.WriteLine("}");
+
         w.Unindent();
         w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // SwitchAsync<T, U>(Operation<T>, Func<T, Task<Operation<U>>>, Func<Error, Task<Operation<U>>>)
+    // SwitchAsync<T>(Func<T, Task>, Func<Error, Task>)
     // ---------------------------------------------------------------------
     private static void EmitSwitchAsync(CodeWriter w, OperationModel op)
     {
@@ -95,31 +111,47 @@ internal sealed class SwitchEmitter : IOperationEmitter
         string failure = op.FailureCaseFQN;
         string resultField = op.ResultField.Name;
         string errorField = op.ErrorField.Name;
-        string errorType = op.ErrorField.Type;
 
         w.WriteLine("/// <summary>");
-        w.WriteLine("/// Asynchronously branches on the operation, mapping success and failure into new operations.");
+        w.WriteLine("/// Asynchronously executes one of two actions depending on whether the operation succeeded or failed.");
         w.WriteLine("/// </summary>");
-        w.WriteLine("/// <typeparam name=\"T\">The input result type.</typeparam>");
-        w.WriteLine("/// <typeparam name=\"U\">The resulting operation type.</typeparam>");
-        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
-        w.WriteLine("/// <param name=\"onSuccessAsync\">The async function to execute when the operation is a success.</param>");
-        w.WriteLine("/// <param name=\"onFailureAsync\">The async function to execute when the operation is a failure.</param>");
-        w.WriteLine("/// <returns>A task producing the resulting operation.</returns>");
-        w.WriteLine($"public static async Task<Operation<U>> SwitchAsync<T, U>(this Operation<T> op, Func<T, Task<Operation<U>>> onSuccessAsync, Func<{errorType}, Task<Operation<U>>> onFailureAsync)");
-        w.WriteLine("{");
+        w.WriteLine("public static async Task SwitchAsync<T>(");
         w.Indent();
-        w.WriteLine("if (onSuccessAsync is null) throw new ArgumentNullException(nameof(onSuccessAsync));");
-        w.WriteLine("if (onFailureAsync is null) throw new ArgumentNullException(nameof(onFailureAsync));");
-        w.WriteLine();
-        w.WriteLine("return op switch");
-        w.WriteLine("{");
-        w.Indent();
-        w.WriteLine($"{success} s => await onSuccessAsync(s.{resultField}).ConfigureAwait(false),");
-        w.WriteLine($"{failure} f => await onFailureAsync(f.{errorField}).ConfigureAwait(false),");
-        w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
+        w.WriteLine("this Operation<T> op,");
+        w.WriteLine("Func<T, Task> onSuccess,");
+        w.WriteLine("Func<Error, Task> onFailure)");
         w.Unindent();
-        w.WriteLine("};");
+        w.WriteLine("{");
+        w.Indent();
+
+        w.WriteLine("if (onSuccess is null) throw new ArgumentNullException(nameof(onSuccess));");
+        w.WriteLine("if (onFailure is null) throw new ArgumentNullException(nameof(onFailure));");
+        w.WriteLine();
+
+        w.WriteLine("switch (op)");
+        w.WriteLine("{");
+        w.Indent();
+
+        w.WriteLine($"case {success} s:");
+        w.Indent();
+        w.WriteLine($"await onSuccess(s.{resultField}).ConfigureAwait(false);");
+        w.WriteLine("break;");
+        w.Unindent();
+
+        w.WriteLine($"case {failure} f:");
+        w.Indent();
+        w.WriteLine($"await onFailure(f.{errorField}).ConfigureAwait(false);");
+        w.WriteLine("break;");
+        w.Unindent();
+
+        w.WriteLine("default:");
+        w.Indent();
+        w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
+        w.Unindent();
+
+        w.Unindent();
+        w.WriteLine("}");
+
         w.Unindent();
         w.WriteLine("}");
     }

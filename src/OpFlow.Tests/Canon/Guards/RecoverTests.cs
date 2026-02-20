@@ -8,17 +8,7 @@ public class RecoverTests
     // Recover<T>(Func<Error, T>)
     // -------------------------------------------------------------
     [Fact]
-    public void Recover_OnSuccess_ReturnsOriginal()
-    {
-        Operation<int> op = Operation.Success(10);
-
-        Operation<int> result = op.Recover(err => 999);
-
-        Assert.Same(op, result);
-    }
-
-    [Fact]
-    public void Recover_OnFailure_InvokesRecoverAndReturnsSuccess()
+    public void Recover_Failure_InvokesRecoveryFunction()
     {
         Error.Validation error = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(error);
@@ -30,13 +20,29 @@ public class RecoverTests
     }
 
     [Fact]
-    public void Recover_OnFailureRecoverThrows_PropagatesException()
+    public void Recover_Success_DoesNotInvokeRecoveryFunction()
     {
-        Error.NotFound error = new Error.NotFound("missing");
-        Operation<int> op = Operation.FailureOf<int>(error);
+        Operation<int> op = Operation.Success(10);
+        bool invoked = false;
+
+        Operation<int> result = op.Recover(err =>
+        {
+            invoked = true;
+            return 0;
+        });
+
+        Assert.False(invoked);
+        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
+        Assert.Equal(10, success.Result);
+    }
+
+    [Fact]
+    public void Recover_RecoveryFunctionThrows_PropagatesException()
+    {
+        Operation<int> op = Operation.FailureOf<int>(new Error.Unexpected("boom"));
 
         Assert.Throws<InvalidOperationException>(() =>
-            op.Recover(_ => throw new InvalidOperationException("boom"))
+            op.Recover(_ => throw new InvalidOperationException("fail"))
         );
     }
 
@@ -44,89 +50,50 @@ public class RecoverTests
     // RecoverAsync<T>(Func<Error, Task<T>>)
     // -------------------------------------------------------------
     [Fact]
-    public async Task RecoverAsync_Func_OnSuccess_ReturnsOriginal()
-    {
-        Operation<int> op = Operation.Success(5);
-
-        Operation<int> result = await op.RecoverAsync(async err =>
-        {
-            await Task.Delay(1);
-            return 999;
-        });
-
-        Assert.Same(op, result);
-    }
-
-    [Fact]
-    public async Task RecoverAsync_Func_OnFailure_InvokesRecoverAndReturnsSuccess()
-    {
-        Error.Unexpected error = new Error.Unexpected("boom");
-        Operation<int> op = Operation.FailureOf<int>(error);
-
-        Operation<int> result = await op.RecoverAsync(async err =>
-        {
-            await Task.Delay(1);
-            return 123;
-        });
-
-        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
-        Assert.Equal(123, success.Result);
-    }
-
-    [Fact]
-    public async Task RecoverAsync_Func_OnFailureRecoverThrows_PropagatesException()
-    {
-        Error.Validation error = new Error.Validation("bad");
-        Operation<int> op = Operation.FailureOf<int>(error);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await op.RecoverAsync(async _ =>
-            {
-                await Task.Delay(1);
-                throw new InvalidOperationException("boom");
-            })
-        );
-    }
-
-    // -------------------------------------------------------------
-    // RecoverAsync<T>(Task<T>)
-    // -------------------------------------------------------------
-    [Fact]
-    public async Task RecoverAsync_Task_OnSuccess_ReturnsOriginal()
-    {
-        Operation<int> op = Operation.Success(42);
-
-        Task<int> task = Task.FromResult(999);
-
-        Operation<int> result = await op.RecoverAsync(task);
-
-        Assert.Same(op, result);
-    }
-
-    [Fact]
-    public async Task RecoverAsync_Task_OnFailure_UsesTaskResult()
+    public async Task RecoverAsync_Failure_InvokesRecoveryFunction()
     {
         Error.NotFound error = new Error.NotFound("missing");
         Operation<int> op = Operation.FailureOf<int>(error);
 
-        Task<int> task = Task.FromResult(777);
-
-        Operation<int> result = await op.RecoverAsync(task);
+        Operation<int> result = await op.RecoverAsync(async err =>
+        {
+            await Task.Delay(1);
+            return 42;
+        });
 
         Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
-        Assert.Equal(777, success.Result);
+        Assert.Equal(42, success.Result);
     }
 
     [Fact]
-    public async Task RecoverAsync_Task_OnFailureTaskThrows_PropagatesException()
+    public async Task RecoverAsync_Success_DoesNotInvokeRecoveryFunction()
     {
-        Error.Unexpected error = new Error.Unexpected("boom");
-        Operation<int> op = Operation.FailureOf<int>(error);
+        Operation<int> op = Operation.Success(10);
+        bool invoked = false;
 
-        Task<int> task = Task.FromException<int>(new InvalidOperationException("fail"));
+        Operation<int> result = await op.RecoverAsync(async err =>
+        {
+            invoked = true;
+            await Task.Delay(1);
+            return 0;
+        });
 
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await op.RecoverAsync(task)
+        Assert.False(invoked);
+        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
+        Assert.Equal(10, success.Result);
+    }
+
+    [Fact]
+    public async Task RecoverAsync_RecoveryFunctionThrows_PropagatesException()
+    {
+        Operation<int> op = Operation.FailureOf<int>(new Error.Unexpected("boom"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            op.RecoverAsync(async _ =>
+            {
+                await Task.Delay(1);
+                throw new InvalidOperationException("fail");
+            })
         );
     }
 }

@@ -19,12 +19,18 @@ public abstract partial record Operation<T>
     /// <summary>
     /// Successful outcome of an operation, containing the result of type T.
     /// </summary>
-    public sealed partial record Success(T Result) : Operation<T>;
+    public sealed partial record Success(T Result) : Operation<T>
+    {
+        public override string ToString() => $"Success: {Result}";
+    }
 
     /// <summary>
     /// Failed outcome of an operation, containing an error.
     /// </summary>
-    public sealed partial record Failure(Error Error) : Operation<T>;
+    public sealed partial record Failure(Error Error) : Operation<T>
+    {
+        public override string ToString() => $"Failure: {Error}";
+    }
 
 
     public override string ToString()

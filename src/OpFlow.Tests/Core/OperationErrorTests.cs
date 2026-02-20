@@ -1,7 +1,5 @@
 ﻿// Copyright (c) 2026 Paulo Pocinho.
 
-using OpFlow.Extensions;
-
 namespace OpFlow.Tests.Core;
 
 public class OperationErrorTests
@@ -151,38 +149,7 @@ public class OperationErrorTests
     }
 
     // ------------------------------------------------------------
-    // 6. Implicit conversions into Operation<T>
-    // ------------------------------------------------------------
-
-    [Fact]
-    public void ImplicitConversion_FromError_ToOperation()
-    {
-        Error.Validation err = new Error.Validation("bad");
-
-        Operation<int> op = err; // implicit conversion
-
-        Assert.True(op.IsFailure());
-        Assert.True(op.TryGetError(out Error e));
-        Assert.Equal(err, e);
-    }
-
-    [Fact]
-    public void ImplicitConversion_FromException_ToOperation()
-    {
-        InvalidOperationException ex = new InvalidOperationException("boom");
-
-        Operation<int> op = ex; // implicit conversion
-
-        Assert.True(op.IsFailure());
-        Assert.True(op.TryGetError(out Error e));
-
-        Error.Unexpected unexpected = Assert.IsType<Error.Unexpected>(e);
-        Assert.Equal("boom", unexpected.Message);
-        Assert.Equal(ex, unexpected.Exception);
-    }
-
-    // ------------------------------------------------------------
-    // 7. Pattern matching correctness
+    // 6. Pattern matching correctness
     // ------------------------------------------------------------
 
     [Fact]

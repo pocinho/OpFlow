@@ -48,8 +48,6 @@ internal sealed class FromEmitter : IOperationEmitter
         w.WriteLine();
         EmitFromAsyncTask(w, op);
         w.WriteLine();
-        EmitFromNullable(w, op);
-        w.WriteLine();
         EmitFromException(w, op);
 
         w.Unindent();
@@ -175,32 +173,6 @@ internal sealed class FromEmitter : IOperationEmitter
         w.WriteLine($"return FailureOf<T>(Error.FromException(ex));");
         w.Unindent();
         w.WriteLine("}");
-        w.Unindent();
-        w.WriteLine("}");
-    }
-
-    // ---------------------------------------------------------------------
-    // FromNullable<T>(T?, string?)
-    // ---------------------------------------------------------------------
-    private static void EmitFromNullable(CodeWriter w, OperationModel op)
-    {
-        string errorType = op.ErrorField.Type;
-
-        w.WriteLine("/// <summary>");
-        w.WriteLine("/// Converts a nullable reference into an operation, producing a failure when the value is null.");
-        w.WriteLine("/// </summary>");
-        w.WriteLine("/// <typeparam name=\"T\">The reference type.</typeparam>");
-        w.WriteLine("/// <param name=\"value\">The nullable value.</param>");
-        w.WriteLine("/// <param name=\"message\">The error message to use when the value is null.</param>");
-        w.WriteLine("/// <returns>A successful operation or a failure if the value is null.</returns>");
-        w.WriteLine("public static Operation<T> FromNullable<T>(T? value, string? message = null) where T : class");
-        w.WriteLine("{");
-        w.Indent();
-        w.WriteLine("return value is null");
-        w.Indent();
-        w.WriteLine("? FailureOf<T>(Error.FromMessage(message ?? \"Value cannot be null.\"))");
-        w.WriteLine(": Success(value);");
-        w.Unindent();
         w.Unindent();
         w.WriteLine("}");
     }

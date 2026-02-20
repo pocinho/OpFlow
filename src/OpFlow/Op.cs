@@ -1,7 +1,5 @@
 ﻿// Copyright (c) 2026 Paulo Pocinho.
 
-using OpFlow.Extensions;
-
 namespace OpFlow;
 
 /// <summary>
@@ -87,14 +85,6 @@ public static class Op
         => Operation.FromException<T>(ex);
 
     /// <summary>
-    /// Wraps a nullable reference into an operation.
-    /// If the value is null, returns a failure with <see cref="Error.Unexpected"/>.
-    /// </summary>
-    public static Operation<T> FromNullable<T>(T? value, string? message = null)
-        where T : class
-        => Operation.FromNullable(value, message);
-
-    /// <summary>
     /// Executes a function and captures exceptions as <see cref="Error.Unexpected"/>.
     /// </summary>
     public static Operation<T> Try<T>(Func<T> func)
@@ -117,56 +107,56 @@ public static class Op
     // 1. Parallel Composition
     // ------------------------------------------------------------
 
-    /// <summary>
-    /// Combines two operations into a tuple.
-    /// If either fails, the first failure is returned.
-    /// </summary>
-    public static Operation<(T1, T2)> WhenAll<T1, T2>(
-        Operation<T1> op1,
-        Operation<T2> op2)
-        => OperationParallelExtensions.WhenAll(op1, op2);
+    ///// <summary>
+    ///// Combines two operations into a tuple.
+    ///// If either fails, the first failure is returned.
+    ///// </summary>
+    //public static Operation<(T1, T2)> WhenAll<T1, T2>(
+    //    Operation<T1> op1,
+    //    Operation<T2> op2)
+    //    => OperationParallelExtensions.WhenAll(op1, op2);
 
-    /// <summary>
-    /// Combines three operations into a tuple.
-    /// If any fail, the first failure is returned.
-    /// </summary>
-    public static Operation<(T1, T2, T3)> WhenAll<T1, T2, T3>(
-        Operation<T1> op1,
-        Operation<T2> op2,
-        Operation<T3> op3)
-        => OperationParallelExtensions.WhenAll(op1, op2, op3);
+    ///// <summary>
+    ///// Combines three operations into a tuple.
+    ///// If any fail, the first failure is returned.
+    ///// </summary>
+    //public static Operation<(T1, T2, T3)> WhenAll<T1, T2, T3>(
+    //    Operation<T1> op1,
+    //    Operation<T2> op2,
+    //    Operation<T3> op3)
+    //    => OperationParallelExtensions.WhenAll(op1, op2, op3);
 
-    /// <summary>
-    /// Combines multiple operations into a list.
-    /// Returns the first failure encountered.
-    /// </summary>
-    public static Operation<IReadOnlyList<T>> WhenAll<T>(
-        params Operation<T>[] ops)
-        => OperationParallelExtensions.WhenAll(ops);
+    ///// <summary>
+    ///// Combines multiple operations into a list.
+    ///// Returns the first failure encountered.
+    ///// </summary>
+    //public static Operation<IReadOnlyList<T>> WhenAll<T>(
+    //    params Operation<T>[] ops)
+    //    => OperationParallelExtensions.WhenAll(ops);
 
-    /// <summary>
-    /// Asynchronously combines two operations.
-    /// </summary>
-    public static Task<Operation<(T1, T2)>> WhenAllAsync<T1, T2>(
-        Task<Operation<T1>> op1,
-        Task<Operation<T2>> op2)
-        => OperationParallelExtensions.WhenAllAsync(op1, op2);
+    ///// <summary>
+    ///// Asynchronously combines two operations.
+    ///// </summary>
+    //public static Task<Operation<(T1, T2)>> WhenAllAsync<T1, T2>(
+    //    Task<Operation<T1>> op1,
+    //    Task<Operation<T2>> op2)
+    //    => OperationParallelExtensions.WhenAllAsync(op1, op2);
 
-    /// <summary>
-    /// Asynchronously combines three operations.
-    /// </summary>
-    public static Task<Operation<(T1, T2, T3)>> WhenAllAsync<T1, T2, T3>(
-        Task<Operation<T1>> op1,
-        Task<Operation<T2>> op2,
-        Task<Operation<T3>> op3)
-        => OperationParallelExtensions.WhenAllAsync(op1, op2, op3);
+    ///// <summary>
+    ///// Asynchronously combines three operations.
+    ///// </summary>
+    //public static Task<Operation<(T1, T2, T3)>> WhenAllAsync<T1, T2, T3>(
+    //    Task<Operation<T1>> op1,
+    //    Task<Operation<T2>> op2,
+    //    Task<Operation<T3>> op3)
+    //    => OperationParallelExtensions.WhenAllAsync(op1, op2, op3);
 
-    /// <summary>
-    /// Asynchronously combines multiple operations.
-    /// </summary>
-    public static Task<Operation<IReadOnlyList<T>>> WhenAllAsync<T>(
-        params Task<Operation<T>>[] tasks)
-        => OperationParallelExtensions.WhenAllAsync(tasks);
+    ///// <summary>
+    ///// Asynchronously combines multiple operations.
+    ///// </summary>
+    //public static Task<Operation<IReadOnlyList<T>>> WhenAllAsync<T>(
+    //    params Task<Operation<T>>[] tasks)
+    //    => OperationParallelExtensions.WhenAllAsync(tasks);
 
 
     // ------------------------------------------------------------
@@ -210,35 +200,35 @@ public static class Op
     //    Error error)
     //    => op.RequireAsync(predicateAsync, error);
 
-    /// <summary>
-    /// Applies validation rules in order, returning the first failure.
-    /// </summary>
-    public static Operation<T> Validate<T>(
-        Operation<T> op,
-        params Func<T, Error?>[] rules)
-        => op.Validate(rules);
+    ///// <summary>
+    ///// Applies validation rules in order, returning the first failure.
+    ///// </summary>
+    //public static Operation<T> Validate<T>(
+    //    Operation<T> op,
+    //    params Func<T, Error?>[] rules)
+    //    => op.Validate(rules);
 
-    /// <summary>
-    /// Asynchronous version of <see cref="Validate{T}(Operation{T}, Func{T, Error?>[])"/>.
-    /// </summary>
-    public static Task<Operation<T>> ValidateAsync<T>(
-        Task<Operation<T>> op,
-        params Func<T, Task<Error?>>[] rules)
-        => op.ValidateAsync(rules);
+    ///// <summary>
+    ///// Asynchronous version of <see cref="Validate{T}(Operation{T}, Func{T, Error?>[])"/>.
+    ///// </summary>
+    //public static Task<Operation<T>> ValidateAsync<T>(
+    //    Task<Operation<T>> op,
+    //    params Func<T, Task<Error?>>[] rules)
+    //    => op.ValidateAsync(rules);
 
-    /// <summary>
-    /// Applies all validation rules and accumulates all errors.
-    /// </summary>
-    public static Operation<T> ValidateAll<T>(
-        Operation<T> op,
-        params Func<T, Error?>[] rules)
-        => op.ValidateAll(rules);
+    ///// <summary>
+    ///// Applies all validation rules and accumulates all errors.
+    ///// </summary>
+    //public static Operation<T> ValidateAll<T>(
+    //    Operation<T> op,
+    //    params Func<T, Error?>[] rules)
+    //    => op.ValidateAll(rules);
 
-    /// <summary>
-    /// Asynchronous version of <see cref="ValidateAll{T}(Operation{T}, Func{T, Error?>[])"/>.
-    /// </summary>
-    public static Task<Operation<T>> ValidateAllAsync<T>(
-        Task<Operation<T>> op,
-        params Func<T, Task<Error?>>[] rules)
-        => op.ValidateAllAsync(rules);
+    ///// <summary>
+    ///// Asynchronous version of <see cref="ValidateAll{T}(Operation{T}, Func{T, Error?>[])"/>.
+    ///// </summary>
+    //public static Task<Operation<T>> ValidateAllAsync<T>(
+    //    Task<Operation<T>> op,
+    //    params Func<T, Task<Error?>>[] rules)
+    //    => op.ValidateAllAsync(rules);
 }

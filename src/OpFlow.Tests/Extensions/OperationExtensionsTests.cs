@@ -78,7 +78,7 @@ public class OperationExtensionsTests
         int captured = 0;
         Operation<int>.Success op = new Operation<int>.Success(42);
 
-        op.OnSuccess(v => captured = v);
+        op.IfSuccess(v => captured = v);
 
         Assert.Equal(42, captured);
     }
@@ -90,7 +90,7 @@ public class OperationExtensionsTests
         Error.Validation error = new Error.Validation("bad");
         Operation<int>.Failure op = new Operation<int>.Failure(error);
 
-        op.OnFailure(e => captured = e);
+        op.IfFailure(e => captured = e);
 
         Assert.Equal(error, captured);
     }
@@ -182,198 +182,6 @@ public class OperationExtensionsTests
         Assert.Equal(99, value);
     }
 
-    // ------------------------------------------------------------
-    // 7. Async Map / Bind
-    // ------------------------------------------------------------
-
-    [Fact]
-    public async Task MapAsync_TransformsValue()
-    {
-        Operation<int>.Success op = new Operation<int>.Success(10);
-
-        Operation<int> result = await op.MapAsync(async v =>
-        {
-            await Task.Delay(1);
-            return v * 3;
-        });
-
-        Assert.True(result.IsSuccess());
-        Assert.True(result.TryGet(out int value));
-        Assert.Equal(30, value);
-    }
-
-    [Fact]
-    public async Task BindAsync_ChainsAsyncOperations()
-    {
-        // Arrange
-        Task<Operation<int>> task =
-            Task.FromResult<Operation<int>>(new Operation<int>.Success(10));
-
-        // Act
-        Operation<string> result = await OperationExtensions.BindAsync<int, string>(
-            task,
-            async v =>
-            {
-                await Task.Delay(1);
-                return new Operation<string>.Success($"async={v}");
-            });
-
-        // Assert
-        Assert.True(result.IsSuccess());
-        Assert.True(result.TryGet(out string value));
-        Assert.Equal("async=10", value);
-    }
-
-    // ------------------------------------------------------------
-    // 8. Async Tap / OnSuccess / OnFailure
-    // ------------------------------------------------------------
-
-    [Fact]
-    public async Task TapAsync_ExecutesAction()
-    {
-        int captured = 0;
-        Task<Operation<int>> op = Task.FromResult<Operation<int>>(new Operation<int>.Success(7));
-
-        await op.TapAsync(async v => { captured = v; await Task.Yield(); });
-
-        Assert.Equal(7, captured);
-    }
-
-    [Fact]
-    public async Task OnFailureAsync_ExecutesAction()
-    {
-        Error captured = null!;
-        Error.Validation error = new Error.Validation("bad");
-        Task<Operation<int>> op = Task.FromResult<Operation<int>>(new Operation<int>.Failure(error));
-
-        await op.OnFailureAsync(async e => { captured = e; await Task.Yield(); });
-
-        Assert.Equal(error, captured);
-    }
-
-    // ------------------------------------------------------------
-    // 9. Async Recover
-    // ------------------------------------------------------------
-
-    [Fact]
-    public async Task RecoverAsync_UsesFallback()
-    {
-        Error.Validation error = new Error.Validation("bad");
-        Task<Operation<int>> op = Task.FromResult<Operation<int>>(new Operation<int>.Failure(error));
-
-        Operation<int> result = await op.RecoverAsync(async _ =>
-        {
-            await Task.Delay(1);
-            return 123;
-        });
-
-        Assert.True(result.IsSuccess());
-        Assert.True(result.TryGet(out int value));
-        Assert.Equal(123, value);
-    }
-
-    // ------------------------------------------------------------
-    // 10. Match / MatchAsync
-    // ------------------------------------------------------------
-
-    [Fact]
-    public void Operation_Match_ReturnsSuccessBranch()
-    {
-        Operation<int>.Success op = new Operation<int>.Success(10);
-
-        string result = op.Match(
-            onSuccess: v => $"value:{v}",
-            onFailure: e => "error"
-        );
-
-        Assert.Equal("value:10", result);
-    }
-
-    [Fact]
-    public void Operation_Match_ReturnsFailureBranch()
-    {
-        Error.Validation error = new Error.Validation("bad");
-        Operation<int>.Failure op = new Operation<int>.Failure(error);
-
-        string result = op.Match(
-            onSuccess: v => "value",
-            onFailure: e => $"error:{e.GetMessage()}"
-        );
-
-        Assert.Equal("error:bad", result);
-    }
-
-    [Fact]
-    public void Operation_Match_Void_InvokesSuccessBranch()
-    {
-        Operation<int>.Success op = new Operation<int>.Success(10);
-        string? observed = null;
-
-        op.Match(
-            onSuccess: v => observed = $"value:{v}",
-            onFailure: e => observed = "error"
-        );
-
-        Assert.Equal("value:10", observed);
-    }
-
-    [Fact]
-    public void Operation_Match_Void_InvokesFailureBranch()
-    {
-        Error.Validation error = new Error.Validation("bad");
-        Operation<int>.Failure op = new Operation<int>.Failure(error);
-        string? observed = null;
-
-        op.Match(
-            onSuccess: v => observed = "value",
-            onFailure: e => observed = $"error:{e.GetMessage()}"
-        );
-
-        Assert.Equal("error:bad", observed);
-    }
-
-    [Fact]
-    public async Task Operation_MatchAsync_ReturnsSuccessBranch()
-    {
-        Task<Operation<int>> task = Task.FromResult<Operation<int>>(new Operation<int>.Success(10));
-
-        string result = await task.MatchAsync(
-            onSuccess: async v =>
-            {
-                await Task.Delay(1);
-                return $"value:{v}";
-            },
-            onFailure: async e =>
-            {
-                await Task.Delay(1);
-                return "error";
-            }
-        );
-
-        Assert.Equal("value:10", result);
-    }
-
-    [Fact]
-    public async Task Operation_MatchAsync_ReturnsFailureBranch()
-    {
-        Error.Validation error = new Error.Validation("bad");
-        Task<Operation<int>> task = Task.FromResult<Operation<int>>(new Operation<int>.Failure(error));
-
-        string result = await task.MatchAsync(
-            onSuccess: async v =>
-            {
-                await Task.Delay(1);
-                return "value";
-            },
-            onFailure: async e =>
-            {
-                await Task.Delay(1);
-                return $"error:{e.GetMessage()}";
-            }
-        );
-
-        Assert.Equal("error:bad", result);
-    }
 
     // ------------------------------------------------------------
     // 11. AsTask returns a completed Task

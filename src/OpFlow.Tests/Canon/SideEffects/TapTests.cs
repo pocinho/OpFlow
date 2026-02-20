@@ -5,90 +5,102 @@ namespace OpFlow.Tests.Canon.SideEffects;
 public class TapTests
 {
     // -------------------------------------------------------------
-    // Tap<T>(Action<T>)
+    // Tap(Action<T>)
     // -------------------------------------------------------------
     [Fact]
-    public void Tap_OnSuccess_InvokesAction()
+    public void Tap_Success_InvokesCallback_AndReturnsSameSuccess()
     {
         Operation<int> op = Operation.Success(10);
+        int? captured = null;
 
-        int captured = 0;
+        Operation<int> result = op.Tap(x => captured = x);
 
-        Operation<int> result = op.Tap(x => captured = x * 2);
-
-        Assert.Same(op, result);
-        Assert.Equal(20, captured);
+        Assert.Equal(10, captured);
+        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
+        Assert.Equal(10, success.Result);
     }
 
     [Fact]
-    public void Tap_OnFailure_DoesNotInvokeAction()
+    public void Tap_Failure_DoesNotInvokeCallback()
     {
         Error.Validation error = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(error);
-
         bool invoked = false;
 
         Operation<int> result = op.Tap(x => invoked = true);
 
-        Assert.Same(op, result);
         Assert.False(invoked);
+        Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
+        Assert.Equal(error, failure.Error);
     }
 
     [Fact]
-    public void Tap_OnSuccessThrows_PropagatesException()
+    public void Tap_CallbackThrows_PropagatesException()
     {
-        Operation<int> op = Operation.Success(5);
+        Operation<int> op = Operation.Success(10);
 
         Assert.Throws<InvalidOperationException>(() =>
             op.Tap(_ => throw new InvalidOperationException("boom"))
         );
     }
 
+    [Fact]
+    public void Tap_CallbackInvokedExactlyOnce()
+    {
+        Operation<int> op = Operation.Success(10);
+        int count = 0;
+
+        Operation<int> result = op.Tap(_ => count++);
+
+        Assert.Equal(1, count);
+        Assert.IsType<Operation<int>.Success>(result);
+    }
+
     // -------------------------------------------------------------
-    // TapAsync<T>(Func<T, Task>)
+    // TapAsync(Func<T, Task>)
     // -------------------------------------------------------------
     [Fact]
-    public async Task TapAsync_Func_OnSuccess_InvokesAction()
+    public async Task TapAsync_Success_InvokesCallback_AndReturnsSameSuccess()
     {
-        Operation<int> op = Operation.Success(7);
-
-        int captured = 0;
+        Operation<int> op = Operation.Success(10);
+        int? captured = null;
 
         Operation<int> result = await op.TapAsync(async x =>
         {
             await Task.Delay(1);
-            captured = x + 1;
+            captured = x;
         });
 
-        Assert.Same(op, result);
-        Assert.Equal(8, captured);
+        Assert.Equal(10, captured);
+        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
+        Assert.Equal(10, success.Result);
     }
 
     [Fact]
-    public async Task TapAsync_Func_OnFailure_DoesNotInvokeAction()
+    public async Task TapAsync_Failure_DoesNotInvokeCallback()
     {
-        Error.NotFound error = new Error.NotFound("missing");
+        Error.Validation error = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(error);
-
         bool invoked = false;
 
         Operation<int> result = await op.TapAsync(async x =>
         {
-            await Task.Delay(1);
             invoked = true;
+            await Task.Delay(1);
         });
 
-        Assert.Same(op, result);
         Assert.False(invoked);
+        Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
+        Assert.Equal(error, failure.Error);
     }
 
     [Fact]
-    public async Task TapAsync_Func_OnSuccessThrows_PropagatesException()
+    public async Task TapAsync_CallbackThrows_PropagatesException()
     {
-        Operation<int> op = Operation.Success(3);
+        Operation<int> op = Operation.Success(10);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await op.TapAsync(async _ =>
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            op.TapAsync(async _ =>
             {
                 await Task.Delay(1);
                 throw new InvalidOperationException("boom");
@@ -96,55 +108,19 @@ public class TapTests
         );
     }
 
-    // -------------------------------------------------------------
-    // TapAsync<T>(Func<Task>)
-    // -------------------------------------------------------------
     [Fact]
-    public async Task TapAsync_Task_OnSuccess_InvokesAction()
+    public async Task TapAsync_CallbackInvokedExactlyOnce()
     {
-        Operation<int> op = Operation.Success(42);
+        Operation<int> op = Operation.Success(10);
+        int count = 0;
 
-        bool invoked = false;
-
-        Operation<int> result = await op.TapAsync(async () =>
+        Operation<int> result = await op.TapAsync(async _ =>
         {
             await Task.Delay(1);
-            invoked = true;
+            count++;
         });
 
-        Assert.Same(op, result);
-        Assert.True(invoked);
-    }
-
-    [Fact]
-    public async Task TapAsync_Task_OnFailure_DoesNotInvokeAction()
-    {
-        Error.Unexpected error = new Error.Unexpected("boom");
-        Operation<int> op = Operation.FailureOf<int>(error);
-
-        bool invoked = false;
-
-        Operation<int> result = await op.TapAsync(async () =>
-        {
-            await Task.Delay(1);
-            invoked = true;
-        });
-
-        Assert.Same(op, result);
-        Assert.False(invoked);
-    }
-
-    [Fact]
-    public async Task TapAsync_Task_OnSuccessThrows_PropagatesException()
-    {
-        Operation<int> op = Operation.Success(1);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await op.TapAsync(async () =>
-            {
-                await Task.Delay(1);
-                throw new InvalidOperationException("boom");
-            })
-        );
+        Assert.Equal(1, count);
+        Assert.IsType<Operation<int>.Success>(result);
     }
 }

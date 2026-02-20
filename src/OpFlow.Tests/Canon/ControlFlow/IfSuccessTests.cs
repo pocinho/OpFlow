@@ -26,7 +26,7 @@ public class IfSuccessTests
         Operation<int> op = Operation.FailureOf<int>(new Error.Unexpected("boom"));
         bool invoked = false;
 
-        Operation<int> result = op.IfSuccess(x => invoked = true);
+        Operation<int> result = op.IfSuccess(_ => invoked = true);
 
         Assert.False(invoked);
         Assert.IsType<Operation<int>.Failure>(result);
@@ -68,7 +68,7 @@ public class IfSuccessTests
         Operation<int> op = Operation.FailureOf<int>(new Error.Unexpected("boom"));
         bool invoked = false;
 
-        Operation<int> result = await op.IfSuccessAsync(x =>
+        Operation<int> result = await op.IfSuccessAsync(_ =>
         {
             invoked = true;
             return Task.CompletedTask;

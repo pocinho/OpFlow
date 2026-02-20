@@ -55,13 +55,15 @@ internal sealed class FlattenEmitter : IOperationEmitter
     {
         string nestedSuccess = $"global::{op.Namespace}.Operation<Operation<T>>.Success";
         string nestedFailure = $"global::{op.Namespace}.Operation<Operation<T>>.Failure";
-
-        string resultField = op.ResultField.Name;
-        string errorField = op.ErrorField.Name;
+        string resultField = op.ResultField.Name; // "Result"
+        string errorField = op.ErrorField.Name;   // "Error"
 
         w.WriteLine("/// <summary>");
         w.WriteLine("/// Flattens a nested operation by removing one level of wrapping.");
         w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The inner operation result type.</typeparam>");
+        w.WriteLine("/// <param name=\"op\">The nested operation.</param>");
+        w.WriteLine("/// <returns>The flattened operation.</returns>");
         w.WriteLine("public static Operation<T> Flatten<T>(this Operation<Operation<T>> op)");
         w.WriteLine("{");
         w.Indent();
@@ -84,13 +86,15 @@ internal sealed class FlattenEmitter : IOperationEmitter
     {
         string nestedSuccess = $"global::{op.Namespace}.Operation<Operation<T>>.Success";
         string nestedFailure = $"global::{op.Namespace}.Operation<Operation<T>>.Failure";
-
         string resultField = op.ResultField.Name;
         string errorField = op.ErrorField.Name;
 
         w.WriteLine("/// <summary>");
         w.WriteLine("/// Asynchronously flattens a nested operation by removing one level of wrapping.");
         w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The inner operation result type.</typeparam>");
+        w.WriteLine("/// <param name=\"opTask\">The nested operation task.</param>");
+        w.WriteLine("/// <returns>A task producing the flattened operation.</returns>");
         w.WriteLine("public static async Task<Operation<T>> FlattenAsync<T>(this Task<Operation<Operation<T>>> opTask)");
         w.WriteLine("{");
         w.Indent();

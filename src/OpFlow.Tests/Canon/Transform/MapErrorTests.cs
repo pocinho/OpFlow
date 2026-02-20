@@ -5,97 +5,138 @@ namespace OpFlow.Tests.Canon.Transform;
 public class MapErrorTests
 {
     // -------------------------------------------------------------
-    // MapError<T>(Func<Error, Error>)
+    // MapError(Func<Error, Error>)
     // -------------------------------------------------------------
     [Fact]
-    public void MapError_OnFailure_MapsError()
-    {
-        Error.NotFound original = new Error.NotFound("missing");
-        Operation<int> op = Operation.FailureOf<int>(original);
-
-        Error.Validation mapped = new Error.Validation("bad");
-
-        Operation<int> result = op.MapError(_ => mapped);
-
-        Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
-        Assert.Equal(mapped, failure.Error);
-    }
-
-    [Fact]
-    public void MapError_OnSuccess_PreservesValue()
-    {
-        Operation<int> op = Operation.Success(10);
-
-        Operation<int> result = op.MapError(err => new Error.Unexpected("ignored"));
-
-        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
-        Assert.Equal(10, success.Result);
-    }
-
-    // -------------------------------------------------------------
-    // MapErrorAsync<T>(Func<Error, Task<Error>>)
-    // -------------------------------------------------------------
-    [Fact]
-    public async Task MapErrorAsync_Func_OnFailure_MapsError()
+    public void MapError_Failure_TransformsError()
     {
         Error.Validation original = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(original);
 
-        Error.Unauthorized mapped = new Error.Unauthorized("nope");
-
-        Operation<int> result = await op.MapErrorAsync(async err =>
-        {
-            await Task.Delay(1);
-            return mapped;
-        });
+        Operation<int> result = op.MapError(err =>
+            new Error.Unexpected($"wrapped:{err.Message}")
+        );
 
         Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
-        Assert.Equal(mapped, failure.Error);
+        Assert.Equal("wrapped:bad", failure.Error.Message);
+        Assert.IsType<Error.Unexpected>(failure.Error);
     }
 
     [Fact]
-    public async Task MapErrorAsync_Func_OnSuccess_PreservesValue()
+    public void MapError_Success_DoesNotInvokeMapper()
     {
-        Operation<int> op = Operation.Success(5);
+        Operation<int> op = Operation.Success(10);
+        bool invoked = false;
 
-        Operation<int> result = await op.MapErrorAsync(async err =>
+        Operation<int> result = op.MapError(err =>
         {
-            await Task.Delay(1);
-            return new Error.NotFound("ignored");
+            invoked = true;
+            return err;
         });
 
+        Assert.False(invoked);
         Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
-        Assert.Equal(5, success.Result);
+        Assert.Equal(10, success.Result);
+    }
+
+    [Fact]
+    public void MapError_MapperThrows_PropagatesException()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int> op = Operation.FailureOf<int>(error);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            op.MapError(_ => throw new InvalidOperationException("boom"))
+        );
+    }
+
+    [Fact]
+    public void MapError_MapperInvokedExactlyOnce()
+    {
+        Error.NotFound error = new Error.NotFound("missing");
+        Operation<int> op = Operation.FailureOf<int>(error);
+
+        int count = 0;
+
+        Operation<int> result = op.MapError(err =>
+        {
+            count++;
+            return err;
+        });
+
+        Assert.Equal(1, count);
+        Assert.IsType<Operation<int>.Failure>(result);
     }
 
     // -------------------------------------------------------------
-    // MapErrorAsync<T>(Task<Error>)
+    // MapErrorAsync(Func<Error, Task<Error>>)
     // -------------------------------------------------------------
     [Fact]
-    public async Task MapErrorAsync_Task_OnFailure_MapsError()
+    public async Task MapErrorAsync_Failure_TransformsError()
     {
-        Error.Unexpected original = new Error.Unexpected("boom");
+        Error.Validation original = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(original);
 
-        Error.Validation mapped = new Error.Validation("bad");
-        Task<Error> task = Task.FromResult<Error>(mapped);
-
-        Operation<int> result = await op.MapErrorAsync(task);
+        Operation<int> result = await op.MapErrorAsync(async err =>
+        {
+            await Task.Delay(1);
+            return new Error.Unexpected($"wrapped:{err.Message}");
+        });
 
         Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
-        Assert.Equal(mapped, failure.Error);
+        Assert.Equal("wrapped:bad", failure.Error.Message);
+        Assert.IsType<Error.Unexpected>(failure.Error);
     }
 
     [Fact]
-    public async Task MapErrorAsync_Task_OnSuccess_PreservesValue()
+    public async Task MapErrorAsync_Success_DoesNotInvokeMapper()
     {
-        Operation<int> op = Operation.Success(42);
+        Operation<int> op = Operation.Success(10);
+        bool invoked = false;
 
-        Task<Error> task = Task.FromResult<Error>(new Error.NotFound("ignored"));
+        Operation<int> result = await op.MapErrorAsync(async err =>
+        {
+            invoked = true;
+            await Task.Delay(1);
+            return err;
+        });
 
-        Operation<int> result = await op.MapErrorAsync(task);
-
+        Assert.False(invoked);
         Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
-        Assert.Equal(42, success.Result);
+        Assert.Equal(10, success.Result);
+    }
+
+    [Fact]
+    public async Task MapErrorAsync_MapperThrows_PropagatesException()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int> op = Operation.FailureOf<int>(error);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            op.MapErrorAsync(async _ =>
+            {
+                await Task.Delay(1);
+                throw new InvalidOperationException("boom");
+            })
+        );
+    }
+
+    [Fact]
+    public async Task MapErrorAsync_MapperInvokedExactlyOnce()
+    {
+        Error.NotFound error = new Error.NotFound("missing");
+        Operation<int> op = Operation.FailureOf<int>(error);
+
+        int count = 0;
+
+        Operation<int> result = await op.MapErrorAsync(async err =>
+        {
+            await Task.Delay(1);
+            count++;
+            return err;
+        });
+
+        Assert.Equal(1, count);
+        Assert.IsType<Operation<int>.Failure>(result);
     }
 }

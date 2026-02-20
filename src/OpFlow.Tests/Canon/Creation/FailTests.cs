@@ -5,67 +5,70 @@ namespace OpFlow.Tests.Canon.Creation;
 public class FailTests
 {
     // -------------------------------------------------------------
-    // Fail<T>(Error)
+    // Fail<T>(Func<Error, Error>)
     // -------------------------------------------------------------
     [Fact]
-    public void Fail_WithError_ReturnsFailure()
+    public void Fail_TransformsError_WhenOperationIsFailure()
     {
-        Error.NotFound error = new Error.NotFound("missing");
-        Operation<int> op = Operation.Fail<int>(error);
+        Error.NotFound original = new Error.NotFound("missing");
+        Operation<int> op = Operation.FromError<int>(original);
 
-        Assert.IsType<Operation<int>.Failure>(op);
-        Assert.Equal(error, ((Operation<int>.Failure)op).Error);
-    }
+        Operation<int> result = op.Fail(err =>
+            new Error.Validation("invalid", new[] { "Field" }));
 
-    // -------------------------------------------------------------
-    // Fail<T>(string message)
-    // -------------------------------------------------------------
-    [Fact]
-    public void Fail_WithMessage_CreatesUnexpectedError()
-    {
-        Operation<int> op = Operation.Fail<int>("boom");
+        Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
+        Error.Validation validation = Assert.IsType<Error.Validation>(failure.Error);
 
-        Assert.IsType<Operation<int>.Failure>(op);
-
-        Error err = ((Operation<int>.Failure)op).Error;
-
-        Error.Unexpected unexpected = Assert.IsType<Error.Unexpected>(err);
-        Assert.Equal("boom", unexpected.Message);
-        Assert.Null(unexpected.Exception);
-    }
-
-    // -------------------------------------------------------------
-    // Fail<T>(string message, params string[] fields)
-    // -------------------------------------------------------------
-    [Fact]
-    public void Fail_WithMessageAndFields_CreatesValidationError()
-    {
-        Operation<int> op = Operation.Fail<int>("invalid", "Name", "Email");
-
-        Assert.IsType<Operation<int>.Failure>(op);
-
-        Error err = ((Operation<int>.Failure)op).Error;
-
-        Error.Validation validation = Assert.IsType<Error.Validation>(err);
         Assert.Equal("invalid", validation.Message);
-        Assert.Equal(new[] { "Name", "Email" }, validation.Fields);
+        Assert.Equal(new[] { "Field" }, validation.Fields);
+    }
+
+    [Fact]
+    public void Fail_DoesNotTransform_WhenOperationIsSuccess()
+    {
+        Operation<int> op = Operation.FromValue(10);
+
+        Operation<int> result = op.Fail(err =>
+            new Error.Validation("should-not-run"));
+
+        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
+        Assert.Equal(10, success.Result);
     }
 
     // -------------------------------------------------------------
-    // Fail<T>(Exception ex)
+    // FailAsync<T>(Func<Error, Task<Error>>)
     // -------------------------------------------------------------
     [Fact]
-    public void Fail_WithException_CreatesUnexpectedError()
+    public async Task FailAsync_TransformsError_WhenOperationIsFailure()
     {
-        InvalidOperationException ex = new InvalidOperationException("bad");
-        Operation<int> op = Operation.Fail<int>(ex);
+        Error.NotFound original = new Error.NotFound("missing");
+        Operation<int> op = Operation.FromError<int>(original);
 
-        Assert.IsType<Operation<int>.Failure>(op);
+        Operation<int> result = await op.FailAsync(async err =>
+        {
+            await Task.Delay(1);
+            return new Error.Validation("invalid", new[] { "Field" });
+        });
 
-        Error err = ((Operation<int>.Failure)op).Error;
+        Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
+        Error.Validation validation = Assert.IsType<Error.Validation>(failure.Error);
 
-        Error.Unexpected unexpected = Assert.IsType<Error.Unexpected>(err);
-        Assert.Equal("bad", unexpected.Message);
-        Assert.Equal(ex, unexpected.Exception);
+        Assert.Equal("invalid", validation.Message);
+        Assert.Equal(new[] { "Field" }, validation.Fields);
+    }
+
+    [Fact]
+    public async Task FailAsync_DoesNotTransform_WhenOperationIsSuccess()
+    {
+        Operation<int> op = Operation.FromValue(10);
+
+        Operation<int> result = await op.FailAsync(async err =>
+        {
+            await Task.Delay(1);
+            return new Error.Validation("should-not-run");
+        });
+
+        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
+        Assert.Equal(10, success.Result);
     }
 }

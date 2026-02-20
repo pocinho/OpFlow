@@ -42,9 +42,7 @@ internal sealed class BindEmitter : IOperationEmitter
 
         EmitBind(w, op);
         w.WriteLine();
-        EmitBindAsyncFunc(w, op);
-        w.WriteLine();
-        EmitBindAsyncTask(w, op);
+        EmitBindAsync(w, op);
 
         w.Unindent();
         w.WriteLine("}");
@@ -63,32 +61,36 @@ internal sealed class BindEmitter : IOperationEmitter
         w.WriteLine("/// <summary>");
         w.WriteLine("/// Chains two operations by applying a binder to the successful result.");
         w.WriteLine("/// </summary>");
-        w.WriteLine("/// <typeparam name=\"T\">The input operation result type.</typeparam>");
-        w.WriteLine("/// <typeparam name=\"U\">The resulting operation result type.</typeparam>");
-        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
-        w.WriteLine("/// <param name=\"binder\">The function that maps a successful value into another operation.</param>");
-        w.WriteLine("/// <returns>The bound operation, or the original failure.</returns>");
-        w.WriteLine("public static Operation<U> Bind<T, U>(this Operation<T> op, Func<T, Operation<U>> binder)");
+        w.WriteLine("public static Operation<U> Bind<T, U>(");
+        w.Indent();
+        w.WriteLine("this Operation<T> op,");
+        w.WriteLine("Func<T, Operation<U>> binder)");
+        w.Unindent();
         w.WriteLine("{");
         w.Indent();
+
         w.WriteLine("if (binder is null) throw new ArgumentNullException(nameof(binder));");
         w.WriteLine();
+
         w.WriteLine("return op switch");
         w.WriteLine("{");
         w.Indent();
+
         w.WriteLine($"{success} s => binder(s.{resultField}),");
-        w.WriteLine($"{failure} f => FailureOf<U>(f.{errorField}),");
+        w.WriteLine($"{failure} f => global::OpFlow.Operation.FailureOf<U>(f.{errorField}),");
         w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
+
         w.Unindent();
         w.WriteLine("};");
+
         w.Unindent();
         w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // BindAsync<T, U>(Task<Operation<T>>, Func<T, Task<Operation<U>>>)
+    // BindAsync<T, U>(Operation<T>, Func<T, Task<Operation<U>>>)
     // ---------------------------------------------------------------------
-    private static void EmitBindAsyncFunc(CodeWriter w, OperationModel op)
+    private static void EmitBindAsync(CodeWriter w, OperationModel op)
     {
         string success = op.SuccessCaseFQN;
         string failure = op.FailureCaseFQN;
@@ -98,70 +100,39 @@ internal sealed class BindEmitter : IOperationEmitter
         w.WriteLine("/// <summary>");
         w.WriteLine("/// Asynchronously chains two operations by applying an async binder to the successful result.");
         w.WriteLine("/// </summary>");
-        w.WriteLine("/// <typeparam name=\"T\">The input operation result type.</typeparam>");
-        w.WriteLine("/// <typeparam name=\"U\">The resulting operation result type.</typeparam>");
-        w.WriteLine("/// <param name=\"opTask\">The source operation task.</param>");
-        w.WriteLine("/// <param name=\"binderAsync\">The async function that maps a successful value into another operation.</param>");
-        w.WriteLine("/// <returns>A task producing the bound operation, or the original failure.</returns>");
         w.WriteLine("public static async Task<Operation<U>> BindAsync<T, U>(");
         w.Indent();
-        w.WriteLine("this Task<Operation<T>> opTask,");
+        w.WriteLine("this Operation<T> op,");
         w.WriteLine("Func<T, Task<Operation<U>>> binderAsync)");
         w.Unindent();
         w.WriteLine("{");
         w.Indent();
+
         w.WriteLine("if (binderAsync is null) throw new ArgumentNullException(nameof(binderAsync));");
         w.WriteLine();
-        w.WriteLine("Operation<T> op = await opTask.ConfigureAwait(false);");
-        w.WriteLine();
-        w.WriteLine("return op switch");
+
+        w.WriteLine("switch (op)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine($"{success} s => await binderAsync(s.{resultField}).ConfigureAwait(false),");
-        w.WriteLine($"{failure} f => FailureOf<U>(f.{errorField}),");
-        w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
+
+        w.WriteLine($"case {success} s:");
+        w.Indent();
+        w.WriteLine("return await binderAsync(s.Result).ConfigureAwait(false);");
         w.Unindent();
-        w.WriteLine("};");
+
+        w.WriteLine($"case {failure} f:");
+        w.Indent();
+        w.WriteLine("return global::OpFlow.Operation.FailureOf<U>(f.Error);");
+        w.Unindent();
+
+        w.WriteLine("default:");
+        w.Indent();
+        w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
+        w.Unindent();
+
         w.Unindent();
         w.WriteLine("}");
-    }
 
-    // ---------------------------------------------------------------------
-    // BindAsync<T, U>(Task<Operation<T>>, Task<Operation<U>>)
-    // ---------------------------------------------------------------------
-    private static void EmitBindAsyncTask(CodeWriter w, OperationModel op)
-    {
-        string success = op.SuccessCaseFQN;
-        string failure = op.FailureCaseFQN;
-        string errorField = op.ErrorField.Name;
-
-        w.WriteLine("/// <summary>");
-        w.WriteLine("/// Asynchronously chains two operations, using a precomputed operation task when the source succeeds.");
-        w.WriteLine("/// </summary>");
-        w.WriteLine("/// <typeparam name=\"T\">The input operation result type.</typeparam>");
-        w.WriteLine("/// <typeparam name=\"U\">The resulting operation result type.</typeparam>");
-        w.WriteLine("/// <param name=\"opTask\">The source operation task.</param>");
-        w.WriteLine("/// <param name=\"nextTask\">The operation task to use when the source succeeds.</param>");
-        w.WriteLine("/// <returns>A task producing the bound operation, or the original failure.</returns>");
-        w.WriteLine("public static async Task<Operation<U>> BindAsync<T, U>(");
-        w.Indent();
-        w.WriteLine("this Task<Operation<T>> opTask,");
-        w.WriteLine("Task<Operation<U>> nextTask)");
-        w.Unindent();
-        w.WriteLine("{");
-        w.Indent();
-        w.WriteLine("if (nextTask is null) throw new ArgumentNullException(nameof(nextTask));");
-        w.WriteLine();
-        w.WriteLine("Operation<T> op = await opTask.ConfigureAwait(false);");
-        w.WriteLine();
-        w.WriteLine("return op switch");
-        w.WriteLine("{");
-        w.Indent();
-        w.WriteLine($"{success} => await nextTask.ConfigureAwait(false),");
-        w.WriteLine($"{failure} f => FailureOf<U>(f.{errorField}),");
-        w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
-        w.Unindent();
-        w.WriteLine("};");
         w.Unindent();
         w.WriteLine("}");
     }

@@ -23,6 +23,7 @@ public class FromTests
     public void FromError_ReturnsFailure()
     {
         Error.NotFound error = new Error.NotFound("missing");
+
         Operation<int> op = Operation.FromError<int>(error);
 
         Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(op);
@@ -133,43 +134,5 @@ public class FromTests
 
         Assert.Equal("fail", unexpected.Message);
         Assert.Equal(ex, unexpected.Exception);
-    }
-
-    // -------------------------------------------------------------
-    // FromNullable<T>
-    // -------------------------------------------------------------
-    [Fact]
-    public void FromNullable_ReturnsSuccess_WhenValueNotNull()
-    {
-        string value = "hello";
-
-        Operation<string> op = Operation.FromNullable(value);
-
-        Operation<string>.Success success = Assert.IsType<Operation<string>.Success>(op);
-        Assert.Equal("hello", success.Result);
-    }
-
-    [Fact]
-    public void FromNullable_ReturnsUnexpectedError_WhenValueIsNull()
-    {
-        Operation<string> op = Operation.FromNullable<string>(null);
-
-        Operation<string>.Failure failure = Assert.IsType<Operation<string>.Failure>(op);
-        Error.Unexpected unexpected = Assert.IsType<Error.Unexpected>(failure.Error);
-
-        Assert.Equal("Value of type String was null.", unexpected.Message);
-        Assert.Null(unexpected.Exception);
-    }
-
-    [Fact]
-    public void FromNullable_UsesCustomMessage_WhenProvided()
-    {
-        Operation<string> op = Operation.FromNullable<string>(null, "custom");
-
-        Operation<string>.Failure failure = Assert.IsType<Operation<string>.Failure>(op);
-        Error.Unexpected unexpected = Assert.IsType<Error.Unexpected>(failure.Error);
-
-        Assert.Equal("custom", unexpected.Message);
-        Assert.Null(unexpected.Exception);
     }
 }

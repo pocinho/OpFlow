@@ -59,37 +59,6 @@ public class OperationTests
     }
 
     // ------------------------------------------------------------
-    // 3. Implicit conversions
-    // ------------------------------------------------------------
-
-    [Fact]
-    public void ImplicitConversion_FromError()
-    {
-        Error.Validation error = new Error.Validation("bad");
-
-        Operation<int> op = error;
-
-        Assert.True(op.IsFailure());
-        Assert.True(op.TryGetError(out Error e));
-        Assert.Equal(error, e);
-    }
-
-    [Fact]
-    public void ImplicitConversion_FromException()
-    {
-        InvalidOperationException ex = new InvalidOperationException("boom");
-
-        Operation<int> op = ex;
-
-        Assert.True(op.IsFailure());
-        Assert.True(op.TryGetError(out Error e));
-
-        Error.Unexpected unexpected = Assert.IsType<Error.Unexpected>(e);
-        Assert.Equal("boom", unexpected.Message);
-        Assert.Equal(ex, unexpected.Exception);
-    }
-
-    // ------------------------------------------------------------
     // 4. TryGet and TryGetError behavior
     // ------------------------------------------------------------
 

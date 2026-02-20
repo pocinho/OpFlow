@@ -10,7 +10,8 @@ public class FlattenTests
     [Fact]
     public void Flatten_SuccessContainingSuccess_ReturnsInnerSuccess()
     {
-        Operation<Operation<int>> outer = Operation.Success(Operation.Success(10));
+        Operation<int> inner = Operation.Success(10);
+        Operation<Operation<int>> outer = Operation.Success(inner);
 
         Operation<int> result = outer.Flatten();
 
@@ -22,8 +23,8 @@ public class FlattenTests
     public void Flatten_SuccessContainingFailure_ReturnsInnerFailure()
     {
         Error.Validation error = new Error.Validation("bad");
-
-        Operation<Operation<int>> outer = Operation.Success(Operation.FailureOf<int>(error));
+        Operation<int> inner = Operation.FailureOf<int>(error);
+        Operation<Operation<int>> outer = Operation.Success(inner);
 
         Operation<int> result = outer.Flatten();
 
@@ -35,7 +36,6 @@ public class FlattenTests
     public void Flatten_Failure_ReturnsFailureWithSameError()
     {
         Error.NotFound error = new Error.NotFound("missing");
-
         Operation<Operation<int>> outer = Operation.FailureOf<Operation<int>>(error);
 
         Operation<int> result = outer.Flatten();
@@ -48,10 +48,61 @@ public class FlattenTests
     public void Flatten_PropagatesUnexpectedError()
     {
         Error.Unexpected error = new Error.Unexpected("boom");
-
         Operation<Operation<int>> outer = Operation.FailureOf<Operation<int>>(error);
 
         Operation<int> result = outer.Flatten();
+
+        Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
+        Assert.Equal(error, failure.Error);
+    }
+
+    // -------------------------------------------------------------
+    // FlattenAsync<T>(Task<Operation<Operation<T>>>)
+    // -------------------------------------------------------------
+    [Fact]
+    public async Task FlattenAsync_SuccessContainingSuccess_ReturnsInnerSuccess()
+    {
+        Operation<int> inner = Operation.Success(10);
+        Operation<Operation<int>> outer = Operation.Success(inner);
+
+        Operation<int> result = await Task.FromResult(outer).FlattenAsync();
+
+        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
+        Assert.Equal(10, success.Result);
+    }
+
+    [Fact]
+    public async Task FlattenAsync_SuccessContainingFailure_ReturnsInnerFailure()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int> inner = Operation.FailureOf<int>(error);
+        Operation<Operation<int>> outer = Operation.Success(inner);
+
+        Operation<int> result = await Task.FromResult(outer).FlattenAsync();
+
+        Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
+        Assert.Equal(error, failure.Error);
+    }
+
+    [Fact]
+    public async Task FlattenAsync_Failure_ReturnsFailureWithSameError()
+    {
+        Error.NotFound error = new Error.NotFound("missing");
+        Operation<Operation<int>> outer = Operation.FailureOf<Operation<int>>(error);
+
+        Operation<int> result = await Task.FromResult(outer).FlattenAsync();
+
+        Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
+        Assert.Equal(error, failure.Error);
+    }
+
+    [Fact]
+    public async Task FlattenAsync_PropagatesUnexpectedError()
+    {
+        Error.Unexpected error = new Error.Unexpected("boom");
+        Operation<Operation<int>> outer = Operation.FailureOf<Operation<int>>(error);
+
+        Operation<int> result = await Task.FromResult(outer).FlattenAsync();
 
         Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
         Assert.Equal(error, failure.Error);
