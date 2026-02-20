@@ -49,89 +49,85 @@ internal sealed class IfFailureEmitter : IOperationEmitter
     }
 
     // ---------------------------------------------------------------------
-    // IfFailure<T>(Action<ErrorType>)
+    // IfFailure<T>(Operation<T>, Action<Error>)
     // ---------------------------------------------------------------------
     private static void EmitIfFailure(CodeWriter w, OperationModel op)
     {
-        string failure = op.FailureCaseFQN;
         string success = op.SuccessCaseFQN;
+        string failure = op.FailureCaseFQN;
+        string errorField = op.ErrorField.Name; // "Error"
         string errorType = op.ErrorField.Type;
-        string errorField = op.ErrorField.Name;
 
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Executes an action when the operation is a failure, without altering the result.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
+        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
+        w.WriteLine("/// <param name=\"action\">The action to execute when the operation is a failure.</param>");
+        w.WriteLine("/// <returns>The original operation.</returns>");
         w.WriteLine($"public static Operation<T> IfFailure<T>(this Operation<T> op, Action<{errorType}> action)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (action is null) throw new ArgumentNullException(nameof(action));");
+        w.WriteLine();
         w.WriteLine("switch (op)");
         w.WriteLine("{");
         w.Indent();
-
-        // Failure
         w.WriteLine($"case {failure} f:");
         w.Indent();
         w.WriteLine($"action(f.{errorField});");
-        w.WriteLine("return op;");
+        w.WriteLine("break;");
         w.Unindent();
-        w.WriteLine();
-
-        // Success
-        w.WriteLine($"case {success} s:");
-        w.Indent();
-        w.WriteLine("return op;");
-        w.Unindent();
-        w.WriteLine();
-
-        // Default
         w.WriteLine("default:");
         w.Indent();
-        w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
+        w.WriteLine("break;");
         w.Unindent();
-
         w.Unindent();
         w.WriteLine("}");
+        w.WriteLine();
+        w.WriteLine("return op;");
         w.Unindent();
         w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // IfFailureAsync<T>(Func<ErrorType, Task>)
+    // IfFailureAsync<T>(Operation<T>, Func<Error, Task>)
     // ---------------------------------------------------------------------
     private static void EmitIfFailureAsync(CodeWriter w, OperationModel op)
     {
-        string failure = op.FailureCaseFQN;
         string success = op.SuccessCaseFQN;
-        string errorType = op.ErrorField.Type;
+        string failure = op.FailureCaseFQN;
         string errorField = op.ErrorField.Name;
+        string errorType = op.ErrorField.Type;
 
-        w.WriteLine($"public static async Task<Operation<T>> IfFailureAsync<T>(this Operation<T> op, Func<{errorType}, Task> action)");
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Asynchronously executes an action when the operation is a failure, without altering the result.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
+        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
+        w.WriteLine("/// <param name=\"actionAsync\">The async action to execute when the operation is a failure.</param>");
+        w.WriteLine("/// <returns>A task producing the original operation.</returns>");
+        w.WriteLine($"public static async Task<Operation<T>> IfFailureAsync<T>(this Operation<T> op, Func<{errorType}, Task> actionAsync)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (actionAsync is null) throw new ArgumentNullException(nameof(actionAsync));");
+        w.WriteLine();
         w.WriteLine("switch (op)");
         w.WriteLine("{");
         w.Indent();
-
-        // Failure
         w.WriteLine($"case {failure} f:");
         w.Indent();
-        w.WriteLine($"await action(f.{errorField}).ConfigureAwait(false);");
-        w.WriteLine("return op;");
+        w.WriteLine($"await actionAsync(f.{errorField}).ConfigureAwait(false);");
+        w.WriteLine("break;");
         w.Unindent();
-        w.WriteLine();
-
-        // Success
-        w.WriteLine($"case {success} s:");
-        w.Indent();
-        w.WriteLine("return op;");
-        w.Unindent();
-        w.WriteLine();
-
-        // Default
         w.WriteLine("default:");
         w.Indent();
-        w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
+        w.WriteLine("break;");
         w.Unindent();
-
         w.Unindent();
         w.WriteLine("}");
+        w.WriteLine();
+        w.WriteLine("return op;");
         w.Unindent();
         w.WriteLine("}");
     }

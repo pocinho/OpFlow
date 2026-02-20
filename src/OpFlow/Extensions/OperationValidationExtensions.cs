@@ -64,26 +64,26 @@ public static class OperationValidationExtensions
     }
 
 
-    // ------------------------------------------------------------
-    // 3. Require (sync)
-    // ------------------------------------------------------------
+    //// ------------------------------------------------------------
+    //// 3. Require (sync)
+    //// ------------------------------------------------------------
 
-    public static Operation<T> Require<T>(
-        this Operation<T> op,
-        Func<T, bool> predicate,
-        Error error)
-        => op.Ensure(predicate, _ => error);
+    //public static Operation<T> Require<T>(
+    //    this Operation<T> op,
+    //    Func<T, bool> predicate,
+    //    Error error)
+    //    => op.Ensure(predicate, _ => error);
 
 
-    // ------------------------------------------------------------
-    // 4. RequireAsync (async)
-    // ------------------------------------------------------------
+    //// ------------------------------------------------------------
+    //// 4. RequireAsync (async)
+    //// ------------------------------------------------------------
 
-    public static Task<Operation<T>> RequireAsync<T>(
-        this Task<Operation<T>> opTask,
-        Func<T, Task<bool>> predicateAsync,
-        Error error)
-        => opTask.EnsureAsync(predicateAsync, _ => error);
+    //public static Task<Operation<T>> RequireAsync<T>(
+    //    this Task<Operation<T>> opTask,
+    //    Func<T, Task<bool>> predicateAsync,
+    //    Error error)
+    //    => opTask.EnsureAsync(predicateAsync, _ => error);
 
 
     // ------------------------------------------------------------
@@ -257,23 +257,23 @@ public static class OperationValidationExtensions
     }
 
 
-    // ------------------------------------------------------------
-    // 9. Common validation helpers
-    // ------------------------------------------------------------
+    //// ------------------------------------------------------------
+    //// 9. Common validation helpers
+    //// ------------------------------------------------------------
 
-    public static Operation<T> NotNull<T>(this Operation<T?> op, string? fieldName = null)
-    {
-        return op.Ensure(
-            v => v is not null,
-            _ => new Error.Validation($"{fieldName ?? "Value"} must not be null")
-        )!;
-    }
+    //public static Operation<T> NotNull<T>(this Operation<T?> op, string? fieldName = null)
+    //{
+    //    return op.Ensure(
+    //        v => v is not null,
+    //        _ => new Error.Validation($"{fieldName ?? "Value"} must not be null")
+    //    )!;
+    //}
 
-    public static Operation<string> NotEmpty(this Operation<string> op, string? fieldName = null)
-    {
-        return op.Ensure(
-            v => !string.IsNullOrWhiteSpace(v),
-            _ => new Error.Validation($"{fieldName ?? "Value"} must not be empty")
-        );
-    }
+    //public static Operation<string> NotEmpty(this Operation<string> op, string? fieldName = null)
+    //{
+    //    return op.Ensure(
+    //        v => !string.IsNullOrWhiteSpace(v),
+    //        _ => new Error.Validation($"{fieldName ?? "Value"} must not be empty")
+    //    );
+    //}
 }

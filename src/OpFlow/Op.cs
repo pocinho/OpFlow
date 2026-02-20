@@ -74,11 +74,11 @@ public static class Op
     public static Task<Operation<T>> FromAsync<T>(Task<T> task)
         => Operation.FromAsync(task);
 
-    /// <summary>
-    /// Creates a failed operation from an error.
-    /// </summary>
-    public static Operation<T> FromError<T>(Error error)
-        => Operation.FromError<T>(error);
+    ///// <summary>
+    ///// Creates a failed operation from an error.
+    ///// </summary>
+    //public static Operation<T> FromError<T>(Error error)
+    //    => Operation.FromError<T>(error);
 
     /// <summary>
     /// Converts an exception into a failed operation.
@@ -173,42 +173,42 @@ public static class Op
     // 2. Validation (domain-level sugar)
     // ------------------------------------------------------------
 
-    /// <summary>
-    /// Ensures a predicate holds for a successful operation.
-    /// If the predicate fails, returns a failure created by <paramref name="errorFactory"/>.
-    /// </summary>
-    public static Operation<T> Ensure<T>(
-        Operation<T> op,
-        Func<T, bool> predicate,
-        Func<T, Error> errorFactory)
-        => op.Ensure(predicate, errorFactory);
+    ///// <summary>
+    ///// Ensures a predicate holds for a successful operation.
+    ///// If the predicate fails, returns a failure created by <paramref name="errorFactory"/>.
+    ///// </summary>
+    //public static Operation<T> Ensure<T>(
+    //    Operation<T> op,
+    //    Func<T, bool> predicate,
+    //    Func<T, Error> errorFactory)
+    //    => op.Ensure(predicate, errorFactory);
 
-    /// <summary>
-    /// Asynchronous version of <see cref="Ensure{T}(Operation{T}, Func{T, bool}, Func{T, Error})"/>.
-    /// </summary>
-    public static Task<Operation<T>> EnsureAsync<T>(
-        Task<Operation<T>> op,
-        Func<T, Task<bool>> predicateAsync,
-        Func<T, Error> errorFactory)
-        => op.EnsureAsync(predicateAsync, errorFactory);
+    ///// <summary>
+    ///// Asynchronous version of <see cref="Ensure{T}(Operation{T}, Func{T, bool}, Func{T, Error})"/>.
+    ///// </summary>
+    //public static Task<Operation<T>> EnsureAsync<T>(
+    //    Task<Operation<T>> op,
+    //    Func<T, Task<bool>> predicateAsync,
+    //    Func<T, Error> errorFactory)
+    //    => op.EnsureAsync(predicateAsync, errorFactory);
 
-    /// <summary>
-    /// Ensures a predicate holds, returning a fixed error if it fails.
-    /// </summary>
-    public static Operation<T> Require<T>(
-        Operation<T> op,
-        Func<T, bool> predicate,
-        Error error)
-        => op.Require(predicate, error);
+    ///// <summary>
+    ///// Ensures a predicate holds, returning a fixed error if it fails.
+    ///// </summary>
+    //public static Operation<T> Require<T>(
+    //    Operation<T> op,
+    //    Func<T, bool> predicate,
+    //    Error error)
+    //    => op.Require(predicate, error);
 
-    /// <summary>
-    /// Asynchronous version of <see cref="Require{T}(Operation{T}, Func{T, bool}, Error)"/>.
-    /// </summary>
-    public static Task<Operation<T>> RequireAsync<T>(
-        Task<Operation<T>> op,
-        Func<T, Task<bool>> predicateAsync,
-        Error error)
-        => op.RequireAsync(predicateAsync, error);
+    ///// <summary>
+    ///// Asynchronous version of <see cref="Require{T}(Operation{T}, Func{T, bool}, Error)"/>.
+    ///// </summary>
+    //public static Task<Operation<T>> RequireAsync<T>(
+    //    Task<Operation<T>> op,
+    //    Func<T, Task<bool>> predicateAsync,
+    //    Error error)
+    //    => op.RequireAsync(predicateAsync, error);
 
     /// <summary>
     /// Applies validation rules in order, returning the first failure.

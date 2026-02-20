@@ -77,23 +77,24 @@ internal static class UnionParser
             if (!SymbolEqualityComparer.Default.Equals(nested.BaseType, unionSymbol))
                 continue;
 
+            // Get the primary constructor (positional record)
             IMethodSymbol? ctor = nested.InstanceConstructors
                 .Where(c => !c.IsImplicitlyDeclared)
-                .OrderBy(c => c.Parameters.Length)
-                .LastOrDefault();
+                .OrderByDescending(c => c.Parameters.Length)
+                .FirstOrDefault();
 
             List<CaseField> fields = new();
 
             if (ctor is not null)
             {
-                foreach (IPropertySymbol property in nested.GetMembers().OfType<IPropertySymbol>())
+                foreach (IParameterSymbol param in ctor.Parameters)
                 {
-                    string typeName = property.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                    string typeName = param.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
                     fields.Add(new CaseField(
-                        Name: property.Name,
+                        Name: param.Name,
                         Type: typeName,
-                        TypeSymbol: property.Type
+                        TypeSymbol: param.Type
                     ));
                 }
             }

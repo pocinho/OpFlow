@@ -42,138 +42,88 @@ internal sealed class TapEmitter : IOperationEmitter
 
         EmitTap(w, op);
         w.WriteLine();
-        EmitTapAsyncFunc(w, op);
-        w.WriteLine();
-        EmitTapAsyncTask(w, op);
+        EmitTapAsync(w, op);
 
         w.Unindent();
         w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // Tap<T>(Action<T>)
+    // Tap<T>(Operation<T>, Action<T>)
     // ---------------------------------------------------------------------
     private static void EmitTap(CodeWriter w, OperationModel op)
     {
         string success = op.SuccessCaseFQN;
-        string failure = op.FailureCaseFQN;
-        string resultField = op.ResultField.Name;
+        string resultField = op.ResultField.Name; // "Result"
 
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Executes a side-effect when the operation is a success, without altering the result.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
+        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
+        w.WriteLine("/// <param name=\"action\">The action to execute when the operation is a success.</param>");
+        w.WriteLine("/// <returns>The original operation.</returns>");
         w.WriteLine("public static Operation<T> Tap<T>(this Operation<T> op, Action<T> action)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (action is null) throw new ArgumentNullException(nameof(action));");
+        w.WriteLine();
         w.WriteLine("switch (op)");
         w.WriteLine("{");
         w.Indent();
-
-        // Success
         w.WriteLine($"case {success} s:");
         w.Indent();
         w.WriteLine($"action(s.{resultField});");
-        w.WriteLine("return op;");
+        w.WriteLine("break;");
         w.Unindent();
-        w.WriteLine();
-
-        // Failure
-        w.WriteLine($"case {failure} f:");
-        w.Indent();
-        w.WriteLine("return op;");
-        w.Unindent();
-        w.WriteLine();
-
-        // Default
         w.WriteLine("default:");
         w.Indent();
-        w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
+        w.WriteLine("break;");
         w.Unindent();
-
         w.Unindent();
         w.WriteLine("}");
+        w.WriteLine();
+        w.WriteLine("return op;");
         w.Unindent();
         w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // TapAsync<T>(Func<T, Task>)
+    // TapAsync<T>(Operation<T>, Func<T, Task>)
     // ---------------------------------------------------------------------
-    private static void EmitTapAsyncFunc(CodeWriter w, OperationModel op)
+    private static void EmitTapAsync(CodeWriter w, OperationModel op)
     {
         string success = op.SuccessCaseFQN;
-        string failure = op.FailureCaseFQN;
         string resultField = op.ResultField.Name;
 
-        w.WriteLine("public static async Task<Operation<T>> TapAsync<T>(this Operation<T> op, Func<T, Task> action)");
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Asynchronously executes a side-effect when the operation is a success, without altering the result.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
+        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
+        w.WriteLine("/// <param name=\"actionAsync\">The async action to execute when the operation is a success.</param>");
+        w.WriteLine("/// <returns>A task producing the original operation.</returns>");
+        w.WriteLine("public static async Task<Operation<T>> TapAsync<T>(this Operation<T> op, Func<T, Task> actionAsync)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (actionAsync is null) throw new ArgumentNullException(nameof(actionAsync));");
+        w.WriteLine();
         w.WriteLine("switch (op)");
         w.WriteLine("{");
         w.Indent();
-
-        // Success
         w.WriteLine($"case {success} s:");
         w.Indent();
-        w.WriteLine($"await action(s.{resultField}).ConfigureAwait(false);");
-        w.WriteLine("return op;");
+        w.WriteLine($"await actionAsync(s.{resultField}).ConfigureAwait(false);");
+        w.WriteLine("break;");
         w.Unindent();
-        w.WriteLine();
-
-        // Failure
-        w.WriteLine($"case {failure} f:");
-        w.Indent();
-        w.WriteLine("return op;");
-        w.Unindent();
-        w.WriteLine();
-
-        // Default
         w.WriteLine("default:");
         w.Indent();
-        w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
+        w.WriteLine("break;");
         w.Unindent();
-
-        w.Unindent();
-        w.WriteLine("}");
         w.Unindent();
         w.WriteLine("}");
-    }
-
-    // ---------------------------------------------------------------------
-    // TapAsync<T>(Func<Task>)
-    // ---------------------------------------------------------------------
-    private static void EmitTapAsyncTask(CodeWriter w, OperationModel op)
-    {
-        string success = op.SuccessCaseFQN;
-        string failure = op.FailureCaseFQN;
-
-        w.WriteLine("public static async Task<Operation<T>> TapAsync<T>(this Operation<T> op, Func<Task> task)");
-        w.WriteLine("{");
-        w.Indent();
-        w.WriteLine("switch (op)");
-        w.WriteLine("{");
-        w.Indent();
-
-        // Success
-        w.WriteLine($"case {success} s:");
-        w.Indent();
-        w.WriteLine("await task().ConfigureAwait(false);");
-        w.WriteLine("return op;");
-        w.Unindent();
         w.WriteLine();
-
-        // Failure
-        w.WriteLine($"case {failure} f:");
-        w.Indent();
         w.WriteLine("return op;");
-        w.Unindent();
-        w.WriteLine();
-
-        // Default
-        w.WriteLine("default:");
-        w.Indent();
-        w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
-        w.Unindent();
-
-        w.Unindent();
-        w.WriteLine("}");
         w.Unindent();
         w.WriteLine("}");
     }

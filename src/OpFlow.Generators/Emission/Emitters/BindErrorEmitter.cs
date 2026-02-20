@@ -51,19 +51,28 @@ internal sealed class BindErrorEmitter : IOperationEmitter
     }
 
     // ---------------------------------------------------------------------
-    // BindError<T>(Operation<T>, Func<ErrorType, Operation<T>>)
+    // BindError<T>(Operation<T>, Func<Error, Operation<T>>)
     // ---------------------------------------------------------------------
     private static void EmitBindError(CodeWriter w, OperationModel op)
     {
-        string failure = op.FailureCaseFQN;
         string success = op.SuccessCaseFQN;
-        string resultField = op.ResultField.Name;
-        string errorField = op.ErrorField.Name;
-        string errorType = op.ErrorField.Type; // fully qualified
+        string failure = op.FailureCaseFQN;
+        string resultField = op.ResultField.Name; // "Result"
+        string errorField = op.ErrorField.Name;   // "Error"
+        string errorType = op.ErrorField.Type;
 
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Applies a binder to the error of a failed operation, leaving successes unchanged.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
+        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
+        w.WriteLine("/// <param name=\"binder\">The function to apply when the operation is a failure.</param>");
+        w.WriteLine("/// <returns>A new operation based on the binder result, or the original success.</returns>");
         w.WriteLine($"public static Operation<T> BindError<T>(this Operation<T> op, Func<{errorType}, Operation<T>> binder)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (binder is null) throw new ArgumentNullException(nameof(binder));");
+        w.WriteLine();
         w.WriteLine("return op switch");
         w.WriteLine("{");
         w.Indent();
@@ -77,23 +86,32 @@ internal sealed class BindErrorEmitter : IOperationEmitter
     }
 
     // ---------------------------------------------------------------------
-    // BindErrorAsync<T>(Operation<T>, Func<ErrorType, Task<Operation<T>>>)
+    // BindErrorAsync<T>(Operation<T>, Func<Error, Task<Operation<T>>>)
     // ---------------------------------------------------------------------
     private static void EmitBindErrorAsyncFunc(CodeWriter w, OperationModel op)
     {
-        string failure = op.FailureCaseFQN;
         string success = op.SuccessCaseFQN;
+        string failure = op.FailureCaseFQN;
         string resultField = op.ResultField.Name;
         string errorField = op.ErrorField.Name;
         string errorType = op.ErrorField.Type;
 
-        w.WriteLine($"public static async Task<Operation<T>> BindErrorAsync<T>(this Operation<T> op, Func<{errorType}, Task<Operation<T>>> binder)");
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Asynchronously applies a binder to the error of a failed operation.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
+        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
+        w.WriteLine("/// <param name=\"binderAsync\">The async function to apply when the operation is a failure.</param>");
+        w.WriteLine("/// <returns>A task producing the bound operation, or the original success.</returns>");
+        w.WriteLine($"public static async Task<Operation<T>> BindErrorAsync<T>(this Operation<T> op, Func<{errorType}, Task<Operation<T>>> binderAsync)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (binderAsync is null) throw new ArgumentNullException(nameof(binderAsync));");
+        w.WriteLine();
         w.WriteLine("return op switch");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine($"{failure} f => await binder(f.{errorField}).ConfigureAwait(false),");
+        w.WriteLine($"{failure} f => await binderAsync(f.{errorField}).ConfigureAwait(false),");
         w.WriteLine($"{success} s => Success(s.{resultField}),");
         w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
         w.Unindent();
@@ -107,18 +125,26 @@ internal sealed class BindErrorEmitter : IOperationEmitter
     // ---------------------------------------------------------------------
     private static void EmitBindErrorAsyncTask(CodeWriter w, OperationModel op)
     {
-        string failure = op.FailureCaseFQN;
         string success = op.SuccessCaseFQN;
+        string failure = op.FailureCaseFQN;
         string resultField = op.ResultField.Name;
-        string errorField = op.ErrorField.Name;
 
-        w.WriteLine("public static async Task<Operation<T>> BindErrorAsync<T>(this Operation<T> op, Task<Operation<T>> task)");
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Asynchronously replaces a failed operation with a precomputed operation task.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
+        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
+        w.WriteLine("/// <param name=\"nextTask\">The task to use when the operation is a failure.</param>");
+        w.WriteLine("/// <returns>A task producing the bound operation, or the original success.</returns>");
+        w.WriteLine("public static async Task<Operation<T>> BindErrorAsync<T>(this Operation<T> op, Task<Operation<T>> nextTask)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (nextTask is null) throw new ArgumentNullException(nameof(nextTask));");
+        w.WriteLine();
         w.WriteLine("return op switch");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine($"{failure} => await task.ConfigureAwait(false),");
+        w.WriteLine($"{failure} => await nextTask.ConfigureAwait(false),");
         w.WriteLine($"{success} s => Success(s.{resultField}),");
         w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
         w.Unindent();

@@ -40,91 +40,59 @@ internal sealed class FromEmitter : IOperationEmitter
         w.WriteLine("{");
         w.Indent();
 
-        EmitSuccess(w, op);
-        w.WriteLine();
-        EmitFailureOf(w, op);
-        w.WriteLine();
-        EmitFromValue(w);
-        w.WriteLine();
-        EmitFromError(w, op);
+        EmitFromValue(w, op);
         w.WriteLine();
         EmitFromFunc(w, op);
         w.WriteLine();
-        EmitFromFuncAsync(w, op);
+        EmitFromAsyncFunc(w, op);
         w.WriteLine();
-        EmitFromTaskAsync(w, op);
-        w.WriteLine();
-        EmitFromException(w, op);
+        EmitFromAsyncTask(w, op);
         w.WriteLine();
         EmitFromNullable(w, op);
+        w.WriteLine();
+        EmitFromException(w, op);
 
         w.Unindent();
         w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // Success<T>
+    // FromValue<T>(T)
     // ---------------------------------------------------------------------
-    private static void EmitSuccess(CodeWriter w, OperationModel op)
+    private static void EmitFromValue(CodeWriter w, OperationModel op)
     {
-        string success = op.SuccessCaseFQN;
-        string resultField = op.ResultField.Name;
-
-        w.WriteLine("public static Operation<T> Success<T>(T value)");
-        w.WriteLine("{");
-        w.Indent();
-        w.WriteLine($"return new {success}(value);");
-        w.Unindent();
-        w.WriteLine("}");
-    }
-
-    // ---------------------------------------------------------------------
-    // FailureOf<T>
-    // ---------------------------------------------------------------------
-    private static void EmitFailureOf(CodeWriter w, OperationModel op)
-    {
-        string errorType = op.ErrorField.Type;
-        string failure = op.FailureCaseFQN;
-
-        w.WriteLine($"public static Operation<T> FailureOf<T>({errorType} error)");
-        w.WriteLine("{");
-        w.Indent();
-        w.WriteLine($"return new {failure}(error);");
-        w.Unindent();
-        w.WriteLine("}");
-    }
-
-    // ---------------------------------------------------------------------
-    // FromValue<T>
-    // ---------------------------------------------------------------------
-    private static void EmitFromValue(CodeWriter w)
-    {
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Wraps a value in a successful operation.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The result type.</typeparam>");
+        w.WriteLine("/// <param name=\"value\">The value to wrap.</param>");
+        w.WriteLine("/// <returns>A successful operation containing the value.</returns>");
         w.WriteLine("public static Operation<T> FromValue<T>(T value)");
-        w.WriteLine("    => Success(value);");
+        w.WriteLine("{");
+        w.Indent();
+        w.WriteLine("return Success(value);");
+        w.Unindent();
+        w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // FromError<T>
-    // ---------------------------------------------------------------------
-    private static void EmitFromError(CodeWriter w, OperationModel op)
-    {
-        string errorType = op.ErrorField.Type;
-
-        w.WriteLine($"public static Operation<T> FromError<T>({errorType} error)");
-        w.WriteLine("    => FailureOf<T>(error);");
-    }
-
-    // ---------------------------------------------------------------------
-    // From(Func<T>)
+    // From<T>(Func<T>)
     // ---------------------------------------------------------------------
     private static void EmitFromFunc(CodeWriter w, OperationModel op)
     {
         string errorType = op.ErrorField.Type;
-        string unexpectedType = $"{errorType}.Unexpected";
 
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Executes a function and wraps its result in an operation, capturing exceptions as failures.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The result type.</typeparam>");
+        w.WriteLine("/// <param name=\"func\">The function to execute.</param>");
+        w.WriteLine("/// <returns>A successful operation or a failure if an exception occurs.</returns>");
         w.WriteLine("public static Operation<T> From<T>(Func<T> func)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (func is null) throw new ArgumentNullException(nameof(func));");
+        w.WriteLine();
         w.WriteLine("try");
         w.WriteLine("{");
         w.Indent();
@@ -134,7 +102,7 @@ internal sealed class FromEmitter : IOperationEmitter
         w.WriteLine("catch (Exception ex)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine($"return FailureOf<T>(new {unexpectedType}(ex.Message, ex));");
+        w.WriteLine($"return FailureOf<T>(Error.FromException(ex));");
         w.Unindent();
         w.WriteLine("}");
         w.Unindent();
@@ -142,26 +110,34 @@ internal sealed class FromEmitter : IOperationEmitter
     }
 
     // ---------------------------------------------------------------------
-    // FromAsync(Func<Task<T>>)
+    // FromAsync<T>(Func<Task<T>>)
     // ---------------------------------------------------------------------
-    private static void EmitFromFuncAsync(CodeWriter w, OperationModel op)
+    private static void EmitFromAsyncFunc(CodeWriter w, OperationModel op)
     {
         string errorType = op.ErrorField.Type;
-        string unexpectedType = $"{errorType}.Unexpected";
 
-        w.WriteLine("public static async Task<Operation<T>> FromAsync<T>(Func<Task<T>> func)");
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Asynchronously executes a function and wraps its result in an operation, capturing exceptions as failures.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The result type.</typeparam>");
+        w.WriteLine("/// <param name=\"funcAsync\">The async function to execute.</param>");
+        w.WriteLine("/// <returns>A task producing a successful operation or a failure if an exception occurs.</returns>");
+        w.WriteLine("public static async Task<Operation<T>> FromAsync<T>(Func<Task<T>> funcAsync)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (funcAsync is null) throw new ArgumentNullException(nameof(funcAsync));");
+        w.WriteLine();
         w.WriteLine("try");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("return Success(await func().ConfigureAwait(false));");
+        w.WriteLine("T value = await funcAsync().ConfigureAwait(false);");
+        w.WriteLine("return Success(value);");
         w.Unindent();
         w.WriteLine("}");
         w.WriteLine("catch (Exception ex)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine($"return FailureOf<T>(new {unexpectedType}(ex.Message, ex));");
+        w.WriteLine($"return FailureOf<T>(Error.FromException(ex));");
         w.Unindent();
         w.WriteLine("}");
         w.Unindent();
@@ -169,26 +145,34 @@ internal sealed class FromEmitter : IOperationEmitter
     }
 
     // ---------------------------------------------------------------------
-    // FromAsync(Task<T>)
+    // FromAsync<T>(Task<T>)
     // ---------------------------------------------------------------------
-    private static void EmitFromTaskAsync(CodeWriter w, OperationModel op)
+    private static void EmitFromAsyncTask(CodeWriter w, OperationModel op)
     {
         string errorType = op.ErrorField.Type;
-        string unexpectedType = $"{errorType}.Unexpected";
 
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Wraps a task result in an operation, capturing exceptions as failures.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The result type.</typeparam>");
+        w.WriteLine("/// <param name=\"task\">The task to await.</param>");
+        w.WriteLine("/// <returns>A task producing a successful operation or a failure if an exception occurs.</returns>");
         w.WriteLine("public static async Task<Operation<T>> FromAsync<T>(Task<T> task)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (task is null) throw new ArgumentNullException(nameof(task));");
+        w.WriteLine();
         w.WriteLine("try");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("return Success(await task.ConfigureAwait(false));");
+        w.WriteLine("T value = await task.ConfigureAwait(false);");
+        w.WriteLine("return Success(value);");
         w.Unindent();
         w.WriteLine("}");
         w.WriteLine("catch (Exception ex)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine($"return FailureOf<T>(new {unexpectedType}(ex.Message, ex));");
+        w.WriteLine($"return FailureOf<T>(Error.FromException(ex));");
         w.Unindent();
         w.WriteLine("}");
         w.Unindent();
@@ -196,34 +180,50 @@ internal sealed class FromEmitter : IOperationEmitter
     }
 
     // ---------------------------------------------------------------------
-    // FromException<T>
-    // ---------------------------------------------------------------------
-    private static void EmitFromException(CodeWriter w, OperationModel op)
-    {
-        string errorType = op.ErrorField.Type;
-        string unexpectedType = $"{errorType}.Unexpected";
-
-        w.WriteLine("public static Operation<T> FromException<T>(Exception ex)");
-        w.WriteLine($"    => FailureOf<T>(new {unexpectedType}(ex.Message, ex));");
-    }
-
-    // ---------------------------------------------------------------------
-    // FromNullable<T>
+    // FromNullable<T>(T?, string?)
     // ---------------------------------------------------------------------
     private static void EmitFromNullable(CodeWriter w, OperationModel op)
     {
         string errorType = op.ErrorField.Type;
-        string unexpectedType = $"{errorType}.Unexpected";
 
-        w.WriteLine("public static Operation<T> FromNullable<T>(T? value, string? message = null)");
-        w.WriteLine("    where T : class");
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Converts a nullable reference into an operation, producing a failure when the value is null.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The reference type.</typeparam>");
+        w.WriteLine("/// <param name=\"value\">The nullable value.</param>");
+        w.WriteLine("/// <param name=\"message\">The error message to use when the value is null.</param>");
+        w.WriteLine("/// <returns>A successful operation or a failure if the value is null.</returns>");
+        w.WriteLine("public static Operation<T> FromNullable<T>(T? value, string? message = null) where T : class");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("return value is not null");
+        w.WriteLine("return value is null");
         w.Indent();
-        w.WriteLine("? Success(value)");
-        w.WriteLine($": FailureOf<T>(new {unexpectedType}(message ?? $\"Value of type {{typeof(T).Name}} was null.\"));");
+        w.WriteLine("? FailureOf<T>(Error.FromMessage(message ?? \"Value cannot be null.\"))");
+        w.WriteLine(": Success(value);");
         w.Unindent();
+        w.Unindent();
+        w.WriteLine("}");
+    }
+
+    // ---------------------------------------------------------------------
+    // FromException<T>(Exception)
+    // ---------------------------------------------------------------------
+    private static void EmitFromException(CodeWriter w, OperationModel op)
+    {
+        string errorType = op.ErrorField.Type;
+
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Converts an exception into a failed operation.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The result type.</typeparam>");
+        w.WriteLine("/// <param name=\"ex\">The exception to convert.</param>");
+        w.WriteLine("/// <returns>A failed operation containing the converted error.</returns>");
+        w.WriteLine("public static Operation<T> FromException<T>(Exception ex)");
+        w.WriteLine("{");
+        w.Indent();
+        w.WriteLine("if (ex is null) throw new ArgumentNullException(nameof(ex));");
+        w.WriteLine();
+        w.WriteLine("return FailureOf<T>(Error.FromException(ex));");
         w.Unindent();
         w.WriteLine("}");
     }

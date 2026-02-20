@@ -71,6 +71,8 @@ internal sealed class BindEmitter : IOperationEmitter
         w.WriteLine("public static Operation<U> Bind<T, U>(this Operation<T> op, Func<T, Operation<U>> binder)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (binder is null) throw new ArgumentNullException(nameof(binder));");
+        w.WriteLine();
         w.WriteLine("return op switch");
         w.WriteLine("{");
         w.Indent();
@@ -108,6 +110,8 @@ internal sealed class BindEmitter : IOperationEmitter
         w.Unindent();
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (binderAsync is null) throw new ArgumentNullException(nameof(binderAsync));");
+        w.WriteLine();
         w.WriteLine("Operation<T> op = await opTask.ConfigureAwait(false);");
         w.WriteLine();
         w.WriteLine("return op switch");
@@ -129,11 +133,10 @@ internal sealed class BindEmitter : IOperationEmitter
     {
         string success = op.SuccessCaseFQN;
         string failure = op.FailureCaseFQN;
-        string resultField = op.ResultField.Name;
         string errorField = op.ErrorField.Name;
 
         w.WriteLine("/// <summary>");
-        w.WriteLine("/// Asynchronously chains two operations, using a precomputed operation task when the source fails.");
+        w.WriteLine("/// Asynchronously chains two operations, using a precomputed operation task when the source succeeds.");
         w.WriteLine("/// </summary>");
         w.WriteLine("/// <typeparam name=\"T\">The input operation result type.</typeparam>");
         w.WriteLine("/// <typeparam name=\"U\">The resulting operation result type.</typeparam>");
@@ -147,6 +150,8 @@ internal sealed class BindEmitter : IOperationEmitter
         w.Unindent();
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (nextTask is null) throw new ArgumentNullException(nameof(nextTask));");
+        w.WriteLine();
         w.WriteLine("Operation<T> op = await opTask.ConfigureAwait(false);");
         w.WriteLine();
         w.WriteLine("return op switch");

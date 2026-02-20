@@ -40,11 +40,11 @@ internal sealed class TryEmitter : IOperationEmitter
         w.WriteLine("{");
         w.Indent();
 
-        EmitTryFunc(w, op);
+        EmitTry(w, op);
         w.WriteLine();
-        EmitTryFuncAsync(w, op);
+        EmitTryAsyncFunc(w, op);
         w.WriteLine();
-        EmitTryTaskAsync(w, op);
+        EmitTryAsyncTask(w, op);
 
         w.Unindent();
         w.WriteLine("}");
@@ -53,14 +53,21 @@ internal sealed class TryEmitter : IOperationEmitter
     // ---------------------------------------------------------------------
     // Try<T>(Func<T>)
     // ---------------------------------------------------------------------
-    private static void EmitTryFunc(CodeWriter w, OperationModel op)
+    private static void EmitTry(CodeWriter w, OperationModel op)
     {
         string errorType = op.ErrorField.Type;
-        string unexpectedType = $"{errorType}.Unexpected";
 
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Executes a function and wraps its result in an operation, capturing exceptions as failures.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The result type.</typeparam>");
+        w.WriteLine("/// <param name=\"func\">The function to execute.</param>");
+        w.WriteLine("/// <returns>A successful operation or a failure if an exception occurs.</returns>");
         w.WriteLine("public static Operation<T> Try<T>(Func<T> func)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (func is null) throw new ArgumentNullException(nameof(func));");
+        w.WriteLine();
         w.WriteLine("try");
         w.WriteLine("{");
         w.Indent();
@@ -70,7 +77,7 @@ internal sealed class TryEmitter : IOperationEmitter
         w.WriteLine("catch (Exception ex)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine($"return FailureOf<T>(new {unexpectedType}(ex.Message, ex));");
+        w.WriteLine("return FailureOf<T>(Error.FromException(ex));");
         w.Unindent();
         w.WriteLine("}");
         w.Unindent();
@@ -80,24 +87,32 @@ internal sealed class TryEmitter : IOperationEmitter
     // ---------------------------------------------------------------------
     // TryAsync<T>(Func<Task<T>>)
     // ---------------------------------------------------------------------
-    private static void EmitTryFuncAsync(CodeWriter w, OperationModel op)
+    private static void EmitTryAsyncFunc(CodeWriter w, OperationModel op)
     {
         string errorType = op.ErrorField.Type;
-        string unexpectedType = $"{errorType}.Unexpected";
 
-        w.WriteLine("public static async Task<Operation<T>> TryAsync<T>(Func<Task<T>> func)");
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Asynchronously executes a function and wraps its result in an operation, capturing exceptions as failures.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The result type.</typeparam>");
+        w.WriteLine("/// <param name=\"funcAsync\">The async function to execute.</param>");
+        w.WriteLine("/// <returns>A task producing a successful operation or a failure if an exception occurs.</returns>");
+        w.WriteLine("public static async Task<Operation<T>> TryAsync<T>(Func<Task<T>> funcAsync)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (funcAsync is null) throw new ArgumentNullException(nameof(funcAsync));");
+        w.WriteLine();
         w.WriteLine("try");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("return Success(await func().ConfigureAwait(false));");
+        w.WriteLine("T value = await funcAsync().ConfigureAwait(false);");
+        w.WriteLine("return Success(value);");
         w.Unindent();
         w.WriteLine("}");
         w.WriteLine("catch (Exception ex)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine($"return FailureOf<T>(new {unexpectedType}(ex.Message, ex));");
+        w.WriteLine("return FailureOf<T>(Error.FromException(ex));");
         w.Unindent();
         w.WriteLine("}");
         w.Unindent();
@@ -107,24 +122,32 @@ internal sealed class TryEmitter : IOperationEmitter
     // ---------------------------------------------------------------------
     // TryAsync<T>(Task<T>)
     // ---------------------------------------------------------------------
-    private static void EmitTryTaskAsync(CodeWriter w, OperationModel op)
+    private static void EmitTryAsyncTask(CodeWriter w, OperationModel op)
     {
         string errorType = op.ErrorField.Type;
-        string unexpectedType = $"{errorType}.Unexpected";
 
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Wraps a task result in an operation, capturing exceptions as failures.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The result type.</typeparam>");
+        w.WriteLine("/// <param name=\"task\">The task to await.</param>");
+        w.WriteLine("/// <returns>A task producing a successful operation or a failure if an exception occurs.</returns>");
         w.WriteLine("public static async Task<Operation<T>> TryAsync<T>(Task<T> task)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (task is null) throw new ArgumentNullException(nameof(task));");
+        w.WriteLine();
         w.WriteLine("try");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("return Success(await task.ConfigureAwait(false));");
+        w.WriteLine("T value = await task.ConfigureAwait(false);");
+        w.WriteLine("return Success(value);");
         w.Unindent();
         w.WriteLine("}");
         w.WriteLine("catch (Exception ex)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine($"return FailureOf<T>(new {unexpectedType}(ex.Message, ex));");
+        w.WriteLine("return FailureOf<T>(Error.FromException(ex));");
         w.Unindent();
         w.WriteLine("}");
         w.Unindent();

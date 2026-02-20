@@ -37,6 +37,8 @@ public sealed class OperationGenerator : IIncrementalGenerator
                 {
                     IOperationEmitter[] opEmitters =
                     [
+                        new FactoryEmitter(),
+
                         // Creation
                         new FromEmitter(),
                         new FailEmitter(),
@@ -51,6 +53,7 @@ public sealed class OperationGenerator : IIncrementalGenerator
                         // Guards
                         new EnsureEmitter(),
                         new ValidateEmitter(),
+                        //new ValidateAllEmitter(),
                         new RecoverEmitter(),
 
                         // Side Effects

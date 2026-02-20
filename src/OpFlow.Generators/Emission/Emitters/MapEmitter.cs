@@ -57,20 +57,28 @@ internal sealed class MapEmitter : IOperationEmitter
     {
         string success = op.SuccessCaseFQN;
         string failure = op.FailureCaseFQN;
-        string resultField = op.ResultField.Name;
-        string errorField = op.ErrorField.Name;
+        string resultField = op.ResultField.Name; // "Result"
+        string errorField = op.ErrorField.Name;   // "Error"
 
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Maps the successful result of an operation using the provided function.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The input result type.</typeparam>");
+        w.WriteLine("/// <typeparam name=\"U\">The mapped result type.</typeparam>");
+        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
+        w.WriteLine("/// <param name=\"mapper\">The mapping function.</param>");
+        w.WriteLine("/// <returns>A mapped success or the original failure.</returns>");
         w.WriteLine("public static Operation<U> Map<T, U>(this Operation<T> op, Func<T, U> mapper)");
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (mapper is null) throw new ArgumentNullException(nameof(mapper));");
+        w.WriteLine();
         w.WriteLine("return op switch");
         w.WriteLine("{");
         w.Indent();
-
         w.WriteLine($"{success} s => Success(mapper(s.{resultField})),");
         w.WriteLine($"{failure} f => FailureOf<U>(f.{errorField}),");
         w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
-
         w.Unindent();
         w.WriteLine("};");
         w.Unindent();
@@ -78,7 +86,7 @@ internal sealed class MapEmitter : IOperationEmitter
     }
 
     // ---------------------------------------------------------------------
-    // MapAsync<T, U>(Operation<T>, Func<T, Task<U>>)
+    // MapAsync<T, U>(Task<Operation<T>>, Func<T, Task<U>>)
     // ---------------------------------------------------------------------
     private static void EmitMapAsyncFunc(CodeWriter w, OperationModel op)
     {
@@ -87,17 +95,31 @@ internal sealed class MapEmitter : IOperationEmitter
         string resultField = op.ResultField.Name;
         string errorField = op.ErrorField.Name;
 
-        w.WriteLine("public static async Task<Operation<U>> MapAsync<T, U>(this Operation<T> op, Func<T, Task<U>> mapper)");
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Asynchronously maps the successful result of an operation using the provided async function.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The input result type.</typeparam>");
+        w.WriteLine("/// <typeparam name=\"U\">The mapped result type.</typeparam>");
+        w.WriteLine("/// <param name=\"opTask\">The source operation task.</param>");
+        w.WriteLine("/// <param name=\"mapperAsync\">The async mapping function.</param>");
+        w.WriteLine("/// <returns>A task producing a mapped success or the original failure.</returns>");
+        w.WriteLine("public static async Task<Operation<U>> MapAsync<T, U>(");
+        w.Indent();
+        w.WriteLine("this Task<Operation<T>> opTask,");
+        w.WriteLine("Func<T, Task<U>> mapperAsync)");
+        w.Unindent();
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (mapperAsync is null) throw new ArgumentNullException(nameof(mapperAsync));");
+        w.WriteLine();
+        w.WriteLine("Operation<T> op = await opTask.ConfigureAwait(false);");
+        w.WriteLine();
         w.WriteLine("return op switch");
         w.WriteLine("{");
         w.Indent();
-
-        w.WriteLine($"{success} s => Success(await mapper(s.{resultField}).ConfigureAwait(false)),");
+        w.WriteLine($"{success} s => Success(await mapperAsync(s.{resultField}).ConfigureAwait(false)),");
         w.WriteLine($"{failure} f => FailureOf<U>(f.{errorField}),");
         w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
-
         w.Unindent();
         w.WriteLine("};");
         w.Unindent();
@@ -105,7 +127,7 @@ internal sealed class MapEmitter : IOperationEmitter
     }
 
     // ---------------------------------------------------------------------
-    // MapAsync<T, U>(Operation<T>, Task<U>)
+    // MapAsync<T, U>(Task<Operation<T>>, Task<U>)
     // ---------------------------------------------------------------------
     private static void EmitMapAsyncTask(CodeWriter w, OperationModel op)
     {
@@ -113,17 +135,31 @@ internal sealed class MapEmitter : IOperationEmitter
         string failure = op.FailureCaseFQN;
         string errorField = op.ErrorField.Name;
 
-        w.WriteLine("public static async Task<Operation<U>> MapAsync<T, U>(this Operation<T> op, Task<U> task)");
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Asynchronously maps the successful result of an operation using a precomputed task.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The input result type.</typeparam>");
+        w.WriteLine("/// <typeparam name=\"U\">The mapped result type.</typeparam>");
+        w.WriteLine("/// <param name=\"opTask\">The source operation task.</param>");
+        w.WriteLine("/// <param name=\"nextTask\">The task producing the mapped value.</param>");
+        w.WriteLine("/// <returns>A task producing a mapped success or the original failure.</returns>");
+        w.WriteLine("public static async Task<Operation<U>> MapAsync<T, U>(");
+        w.Indent();
+        w.WriteLine("this Task<Operation<T>> opTask,");
+        w.WriteLine("Task<U> nextTask)");
+        w.Unindent();
         w.WriteLine("{");
         w.Indent();
+        w.WriteLine("if (nextTask is null) throw new ArgumentNullException(nameof(nextTask));");
+        w.WriteLine();
+        w.WriteLine("Operation<T> op = await opTask.ConfigureAwait(false);");
+        w.WriteLine();
         w.WriteLine("return op switch");
         w.WriteLine("{");
         w.Indent();
-
-        w.WriteLine($"{success} => Success(await task.ConfigureAwait(false)),");
+        w.WriteLine($"{success} => Success(await nextTask.ConfigureAwait(false)),");
         w.WriteLine($"{failure} f => FailureOf<U>(f.{errorField}),");
         w.WriteLine("_ => throw new InvalidOperationException(\"Unknown Operation state.\")");
-
         w.Unindent();
         w.WriteLine("};");
         w.Unindent();

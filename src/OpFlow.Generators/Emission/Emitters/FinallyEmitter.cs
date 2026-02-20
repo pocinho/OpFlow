@@ -31,46 +31,96 @@ internal sealed class FinallyEmitter : IOperationEmitter
     {
         w.WriteLine($"namespace {op.Namespace};");
         w.WriteLine();
-        EmitClass(w);
+        EmitClass(w, op);
     }
 
-    private static void EmitClass(CodeWriter w)
+    private static void EmitClass(CodeWriter w, OperationModel op)
     {
         w.WriteLine("public static partial class Operation");
         w.WriteLine("{");
         w.Indent();
 
-        EmitFinally(w);
+        EmitFinally(w, op);
         w.WriteLine();
-        EmitFinallyAsync(w);
+        EmitFinallyAsync(w, op);
 
         w.Unindent();
         w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // Finally<T>(Action)
+    // Finally<T>(Operation<T>, Action)
     // ---------------------------------------------------------------------
-    private static void EmitFinally(CodeWriter w)
+    private static void EmitFinally(CodeWriter w, OperationModel op)
     {
-        w.WriteLine("public static Operation<T> Finally<T>(this Operation<T> op, Action action)");
+        string success = op.SuccessCaseFQN;
+        string failure = op.FailureCaseFQN;
+
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Executes a finalizing action regardless of whether the operation succeeded or failed.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
+        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
+        w.WriteLine("/// <param name=\"finalizer\">The action to execute unconditionally.</param>");
+        w.WriteLine("/// <returns>The original operation.</returns>");
+        w.WriteLine("public static Operation<T> Finally<T>(this Operation<T> op, Action finalizer)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("action();");
+        w.WriteLine("if (finalizer is null) throw new ArgumentNullException(nameof(finalizer));");
+        w.WriteLine();
+        w.WriteLine("try");
+        w.WriteLine("{");
+        w.Indent();
+        w.WriteLine("finalizer();");
+        w.Unindent();
+        w.WriteLine("}");
+        w.WriteLine("catch");
+        w.WriteLine("{");
+        w.Indent();
+        w.WriteLine("// Finalizers must not alter the operation outcome.");
+        w.WriteLine("throw;");
+        w.Unindent();
+        w.WriteLine("}");
+        w.WriteLine();
         w.WriteLine("return op;");
         w.Unindent();
         w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // FinallyAsync<T>(Func<Task>)
+    // FinallyAsync<T>(Operation<T>, Func<Task>)
     // ---------------------------------------------------------------------
-    private static void EmitFinallyAsync(CodeWriter w)
+    private static void EmitFinallyAsync(CodeWriter w, OperationModel op)
     {
-        w.WriteLine("public static async Task<Operation<T>> FinallyAsync<T>(this Operation<T> op, Func<Task> action)");
+        string success = op.SuccessCaseFQN;
+        string failure = op.FailureCaseFQN;
+
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Asynchronously executes a finalizing action regardless of whether the operation succeeded or failed.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
+        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
+        w.WriteLine("/// <param name=\"finalizerAsync\">The async action to execute unconditionally.</param>");
+        w.WriteLine("/// <returns>A task producing the original operation.</returns>");
+        w.WriteLine("public static async Task<Operation<T>> FinallyAsync<T>(this Operation<T> op, Func<Task> finalizerAsync)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("await action().ConfigureAwait(false);");
+        w.WriteLine("if (finalizerAsync is null) throw new ArgumentNullException(nameof(finalizerAsync));");
+        w.WriteLine();
+        w.WriteLine("try");
+        w.WriteLine("{");
+        w.Indent();
+        w.WriteLine("await finalizerAsync().ConfigureAwait(false);");
+        w.Unindent();
+        w.WriteLine("}");
+        w.WriteLine("catch");
+        w.WriteLine("{");
+        w.Indent();
+        w.WriteLine("// Finalizers must not alter the operation outcome.");
+        w.WriteLine("throw;");
+        w.Unindent();
+        w.WriteLine("}");
+        w.WriteLine();
         w.WriteLine("return op;");
         w.Unindent();
         w.WriteLine("}");
