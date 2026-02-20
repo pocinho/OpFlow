@@ -1,6 +1,6 @@
 ﻿// Copyright (c) 2026 Paulo Pocinho.
 
-namespace OpFlow.Extensions;
+namespace OpFlow;
 
 public static class ErrorExtensions
 {

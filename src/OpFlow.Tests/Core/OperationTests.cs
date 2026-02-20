@@ -1,7 +1,5 @@
 ﻿// Copyright (c) 2026 Paulo Pocinho.
 
-using OpFlow.Extensions;
-
 namespace OpFlow.Tests.Core;
 
 public class OperationTests

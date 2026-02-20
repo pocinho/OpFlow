@@ -1,179 +1,183 @@
 ![OpFlow Banner](./img/banner.svg)
 
-# **OpFlow**
-*A lightweight, expressive, functional result type for C#.*
+# **OpFlow**  
+### *A minimal, expressive pipeline framework for C#.*
 
-OpFlow is a small, powerful library for representing success or failure without exceptions.  
-It brings functional composition, LINQ support, async workflows, and domain‑driven validation into a clean, idiomatic C# API.
+OpFlow is a small, intentional library for building clear, composable, narrative‑driven pipelines in C#.  
+It gives you a single, predictable abstraction — `Operation<T>` — that represents either:
 
-If you’ve ever written nested `try/catch`, null checks, or defensive validation, OpFlow gives you a clearer, more expressive alternative.
+- a **successful** result, or  
+- a **failed** result with a structured `Error`.
 
----
-
-## **✨ Features**
-
-- **Success/Failure result type** with structured error cases  
-- **LINQ support** for clean, declarative pipelines  
-- **Async‑first design** (`BindAsync`, `SelectManyAsync`, `EnsureAsync`, etc.)  
-- **Parallel composition** (`WhenAll`, `WhenAllAsync`)  
-- **Domain‑friendly validation** (`Ensure`, `Require`, `Validate`, `ValidateAll`)  
-- **Side‑effect helpers** (`Tap`, `OnSuccess`, `OnFailure`)  
-- **Error pattern matching**  
-- **Safe wrappers** for exceptions, tasks, and nullable values  
-
-OpFlow is intentionally minimal, predictable, and easy to adopt.
+No magic. No hidden behavior. No alternative syntaxes.  
+Just a crisp transform canon that makes pipelines explicit and easy to reason about.
 
 ---
 
-## **📦 Installation**
+## **Why OpFlow?**
+
+Modern C# codebases often struggle with:
+
+- scattered error handling  
+- inconsistent validation  
+- deeply nested `try/catch` blocks  
+- ad‑hoc null checks  
+- unpredictable async flows  
+- multiple ways to express the same logic  
+
+OpFlow solves this by giving you:
+
+- **One canonical way** to compose operations  
+- **One predictable error model**  
+- **One narrative** for how data flows through your system  
+
+Everything is explicit.  
+Everything is discoverable.  
+Everything is composable.
+
+---
+
+## **The Core Abstraction: `Operation<T>`**
+
+An `Operation<T>` is either:
+
+```csharp
+Success(T result)
+Failure(Error error)
+```
+
+This is the foundation of OpFlow.  
+Every transform, validation, and boundary conversion builds on this shape.
+
+---
+
+## **The Transform Canon**
+
+OpFlow defines a small set of operators that form the backbone of every pipeline:
+
+- `Map` — transform a successful value  
+- `Bind` — chain dependent operations  
+- `MapAsync` — async transform  
+- `BindAsync` — async chaining  
+- `Tap` — observe without modifying  
+- `Recover` — handle failures  
+- `Match` — pattern‑match success/failure  
+- `Finally` — unify both branches  
+
+These operators live on `Operation<T>` itself — not on the `Op` façade — to ensure a single canonical implementation.
+
+---
+
+## **The `Op` Façade**
+
+`Op` is the recommended entry point for creating operations.  
+It exposes only boundary‑level helpers:
+
+```csharp
+Op.Success(value)
+Op.Failure<T>(error)
+Op.From(value)
+Op.From(func)
+Op.FromAsync(func)
+Op.FromException<T>(ex)
+Op.Try(func)
+Op.TryAsync(func)
+```
+
+These helpers wrap raw values, exceptions, and tasks into operations so your pipeline can begin cleanly.
+
+---
+
+## **Validation**
+
+Validation is a first‑class part of the transform canon.
+
+OpFlow provides:
+
+```csharp
+Operation.Validate(...)
+Operation.ValidateAll(...)
+Operation.ValidateAsync(...)
+Operation.ValidateAllAsync(...)
+```
+
+These operators aggregate multiple operations into one, collecting errors when needed.
+
+No LINQ sugar.  
+No parallel sugar.  
+No alternative syntaxes.  
+Just explicit, predictable validation.
+
+---
+
+## **A Simple Example**
+
+```csharp
+var op =
+    Op.From(() => File.ReadAllText("config.json"))
+      .Map(ParseConfig)
+      .Bind(ValidateConfig)
+      .BindAsync(SaveConfigAsync)
+      .Tap(_ => Log("Config saved"))
+      .Recover(error => LogError(error))
+      .Match(
+          onSuccess: _ => "OK",
+          onFailure: error => $"Failed: {error.Message}"
+      );
+```
+
+This is the OpFlow story:
+
+- clear  
+- sequential  
+- explicit  
+- readable  
+- no hidden behavior  
+
+---
+
+## **Design Principles**
+
+OpFlow is built on a few strong convictions:
+
+### **1. One way to do things**
+No LINQ query syntax.  
+No parallel sugar.  
+No redundant helpers.  
+Just the transform canon.
+
+### **2. Explicit over implicit**
+Every step is visible.  
+Every failure is accounted for.  
+Every async boundary is intentional.
+
+### **3. Narrative‑driven pipelines**
+Your code should read like a story.  
+OpFlow helps you tell it.
+
+### **4. Minimal surface area**
+A small API is a powerful API.  
+OpFlow stays out of your way.
+
+---
+
+## **What OpFlow Is Not**
+
+- Not a functional programming framework  
+- Not a LINQ provider  
+- Not a parallel execution engine  
+- Not a replacement for exceptions  
+- Not a monad‑heavy abstraction layer  
+
+OpFlow is a **pipeline framework** — nothing more, nothing less.
+
+---
+
+## **Installation**
 
 ```bash
 dotnet add package OpFlow
 ```
-
----
-
-## **🚀 Quick Start**
-
-### **Success & Failure**
-
-```csharp
-var ok = Op.Success(42);
-var fail = Op.Failure<int>(new Error.Validation("Invalid input"));
-```
-
----
-
-### **Mapping**
-
-```csharp
-var op =
-    Op.Success(10)
-      .Map(x => x * 2);   // 20
-```
-
----
-
-### **Chaining (Bind)**
-
-```csharp
-var op =
-    Op.Success(10)
-      .Bind(x => Op.Success(x + 5));
-```
-
----
-
-### **LINQ Composition**
-
-```csharp
-var op =
-    from x in Op.Success(10)
-    from y in Op.Success(x + 5)
-    select y * 2;
-```
-
----
-
-### **Async Workflows**
-
-```csharp
-var op =
-    await Op.Success(10)
-        .AsTask()
-        .BindAsync(async x =>
-        {
-            await Task.Delay(1);
-            return Op.Success(x + 5);
-        });
-```
-
----
-
-### **Validation**
-
-```csharp
-var op =
-    Op.Success(10)
-      .Ensure(x => x > 0, x => new Error.Validation("Must be positive"));
-```
-
----
-
-### **Parallel Composition**
-
-```csharp
-var combined =
-    Op.WhenAll(
-        Op.Success(10),
-        Op.Success("hello")
-    );
-```
-
-Async:
-
-```csharp
-var combined =
-    await Op.WhenAllAsync(
-        LoadUser(id),
-        LoadOrders(id)
-    );
-```
-
----
-
-### **Recover**
-
-```csharp
-var safe =
-    Op.Failure<int>(new Error.Validation("bad"))
-      .Recover(_ => 0);
-```
-
----
-
-### **Pattern Matching**
-
-```csharp
-op.Match(
-    onSuccess: x => Console.WriteLine($"OK: {x}"),
-    onFailure: e => Console.WriteLine($"Error: {e.GetMessage()}")
-);
-```
-
----
-
-## **🧩 Error Types**
-
-OpFlow ships with four built‑in error cases:
-
-- `Validation`
-- `NotFound`
-- `Unauthorized`
-- `Unexpected`
-
-Each error type carries structured information and supports pattern matching:
-
-```csharp
-error.Match(
-    validation: v => Log(v.Message),
-    notFound: n => Log("Missing"),
-    unauthorized: u => Log("No access"),
-    unexpected: x => Log(x.Exception?.Message)
-);
-```
-
----
-
-## **🧭 Philosophy**
-
-OpFlow is built around three principles:
-
-1. **Clarity over cleverness**  
-2. **Predictable, explicit control flow**  
-3. **Functional ergonomics without ceremony**
-
-It aims to feel natural in C#, for real‑world codebases where correctness, readability, and maintainability matter.
 
 ---
 

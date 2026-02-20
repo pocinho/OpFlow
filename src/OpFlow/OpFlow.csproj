@@ -9,17 +9,21 @@
 		<Product>OpFlow</Product>
 		<Description>Functional pipeline and discriminated union framework for C#.</Description>
 		<PackageTags>OpFlow;Converters;Discriminated Unions;functional;pipeline;union;monad;validation;result;operation</PackageTags>
-		<Version>1.0.3</Version>
+		<Version>1.0.4</Version>
 
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="README.md" Pack="true" PackagePath="\"/>
+		<None Include="README.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
 	
 	<ItemGroup>
 		<ProjectReference Include="..\OpFlow.Generators\OpFlow.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <Folder Include="Extensions\" />
 	</ItemGroup>
 
 </Project>
