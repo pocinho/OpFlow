@@ -27,7 +27,7 @@ public class TapTests
         Operation<int> op = Operation.FailureOf<int>(error);
         bool invoked = false;
 
-        Operation<int> result = op.Tap(x => invoked = true);
+        Operation<int> result = op.Tap(_ => invoked = true);
 
         Assert.False(invoked);
         Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
@@ -57,10 +57,10 @@ public class TapTests
     }
 
     // -------------------------------------------------------------
-    // TapAsync(Func<T, Task>)
+    // TapAsync(Operation<T>, Func<T, Task>)
     // -------------------------------------------------------------
     [Fact]
-    public async Task TapAsync_Success_InvokesCallback_AndReturnsSameSuccess()
+    public async Task TapAsync_Operation_Success_InvokesCallback_AndReturnsSameSuccess()
     {
         Operation<int> op = Operation.Success(10);
         int? captured = null;
@@ -77,13 +77,13 @@ public class TapTests
     }
 
     [Fact]
-    public async Task TapAsync_Failure_DoesNotInvokeCallback()
+    public async Task TapAsync_Operation_Failure_DoesNotInvokeCallback()
     {
         Error.Validation error = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(error);
         bool invoked = false;
 
-        Operation<int> result = await op.TapAsync(async x =>
+        Operation<int> result = await op.TapAsync(async _ =>
         {
             invoked = true;
             await Task.Delay(1);
@@ -95,7 +95,7 @@ public class TapTests
     }
 
     [Fact]
-    public async Task TapAsync_CallbackThrows_PropagatesException()
+    public async Task TapAsync_Operation_CallbackThrows_PropagatesException()
     {
         Operation<int> op = Operation.Success(10);
 
@@ -109,7 +109,7 @@ public class TapTests
     }
 
     [Fact]
-    public async Task TapAsync_CallbackInvokedExactlyOnce()
+    public async Task TapAsync_Operation_CallbackInvokedExactlyOnce()
     {
         Operation<int> op = Operation.Success(10);
         int count = 0;
@@ -119,6 +119,58 @@ public class TapTests
             await Task.Delay(1);
             count++;
         });
+
+        Assert.Equal(1, count);
+        Assert.IsType<Operation<int>.Success>(result);
+    }
+
+    // -------------------------------------------------------------
+    // TapAsync(Task<Operation<T>>, Action<T>)  (canonical async shape)
+    // -------------------------------------------------------------
+    [Fact]
+    public async Task TapAsync_Task_Success_InvokesCallback_AndReturnsSameSuccess()
+    {
+        Task<Operation<int>> opTask = Task.FromResult(Operation.Success(10));
+        int? captured = null;
+
+        Operation<int> result = await opTask.TapAsync(x => captured = x);
+
+        Assert.Equal(10, captured);
+        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
+        Assert.Equal(10, success.Result);
+    }
+
+    [Fact]
+    public async Task TapAsync_Task_Failure_DoesNotInvokeCallback()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Task<Operation<int>> opTask = Task.FromResult(Operation.FailureOf<int>(error));
+        bool invoked = false;
+
+        Operation<int> result = await opTask.TapAsync(_ => invoked = true);
+
+        Assert.False(invoked);
+        Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
+        Assert.Equal(error, failure.Error);
+    }
+
+    [Fact]
+    public async Task TapAsync_Task_CallbackThrows_PropagatesException()
+    {
+        Task<Operation<int>> opTask = Task.FromResult(Operation.Success(10));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            opTask.TapAsync(_ => throw new InvalidOperationException("boom"))
+        );
+    }
+
+    [Fact]
+    public async Task TapAsync_Task_CallbackInvokedExactlyOnce()
+    {
+        Task<Operation<int>> opTask = Task.FromResult(Operation.Success(10));
+        int count = 0;
+
+        Operation<int> result = await opTask.TapAsync(_ => count++);
 
         Assert.Equal(1, count);
         Assert.IsType<Operation<int>.Success>(result);

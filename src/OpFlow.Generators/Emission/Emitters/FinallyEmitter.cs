@@ -43,42 +43,58 @@ internal sealed class FinallyEmitter : IOperationEmitter
         EmitFinally(w, op);
         w.WriteLine();
         EmitFinallyAsync(w, op);
+        w.WriteLine();
+        EmitFinallyAsyncTask(w, op);
 
         w.Unindent();
         w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // Finally<T>(Operation<T>, Action)
+    // Finally<T>(Operation<T>, Action<T>, Action<Error>)
     // ---------------------------------------------------------------------
     private static void EmitFinally(CodeWriter w, OperationModel op)
     {
         string success = op.SuccessCaseFQN;
         string failure = op.FailureCaseFQN;
+        string resultField = op.ResultField.Name;
+        string errorField = op.ErrorField.Name;
 
         w.WriteLine("/// <summary>");
-        w.WriteLine("/// Executes a finalizing action regardless of whether the operation succeeded or failed.");
+        w.WriteLine("/// Executes side-effects for both success and failure without altering the result.");
         w.WriteLine("/// </summary>");
-        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
-        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
-        w.WriteLine("/// <param name=\"finalizer\">The action to execute unconditionally.</param>");
-        w.WriteLine("/// <returns>The original operation.</returns>");
-        w.WriteLine("public static Operation<T> Finally<T>(this Operation<T> op, Action finalizer)");
+        w.WriteLine("public static Operation<T> Finally<T>(");
+        w.WriteLine("    this Operation<T> op,");
+        w.WriteLine("    Action<T> onSuccess,");
+        w.WriteLine("    Action<Error> onFailure)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("if (finalizer is null) throw new ArgumentNullException(nameof(finalizer));");
+        w.WriteLine("if (onSuccess is null) throw new ArgumentNullException(nameof(onSuccess));");
+        w.WriteLine("if (onFailure is null) throw new ArgumentNullException(nameof(onFailure));");
         w.WriteLine();
-        w.WriteLine("try");
+        w.WriteLine("switch (op)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("finalizer();");
+
+        w.WriteLine($"case {success} s:");
+        w.Indent();
+        w.WriteLine($"onSuccess(s.{resultField});");
+        w.WriteLine("break;");
         w.Unindent();
-        w.WriteLine("}");
-        w.WriteLine("catch");
-        w.WriteLine("{");
+        w.WriteLine();
+
+        w.WriteLine($"case {failure} f:");
         w.Indent();
-        w.WriteLine("// Finalizers must not alter the operation outcome.");
-        w.WriteLine("throw;");
+        w.WriteLine("onFailure(f.Error);");
+        w.WriteLine("break;");
+        w.Unindent();
+        w.WriteLine();
+
+        w.WriteLine("default:");
+        w.Indent();
+        w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
+        w.Unindent();
+
         w.Unindent();
         w.WriteLine("}");
         w.WriteLine();
@@ -88,7 +104,7 @@ internal sealed class FinallyEmitter : IOperationEmitter
     }
 
     // ---------------------------------------------------------------------
-    // FinallyAsync<T>(Operation<T>, Func<Task>)
+    // FinallyAsync<T>(Operation<T>, Action<T>, Action<Error>)
     // ---------------------------------------------------------------------
     private static void EmitFinallyAsync(CodeWriter w, OperationModel op)
     {
@@ -96,28 +112,79 @@ internal sealed class FinallyEmitter : IOperationEmitter
         string failure = op.FailureCaseFQN;
 
         w.WriteLine("/// <summary>");
-        w.WriteLine("/// Asynchronously executes a finalizing action regardless of whether the operation succeeded or failed.");
+        w.WriteLine("/// Asynchronously executes side-effects for both success and failure without altering the result.");
         w.WriteLine("/// </summary>");
-        w.WriteLine("/// <typeparam name=\"T\">The operation result type.</typeparam>");
-        w.WriteLine("/// <param name=\"op\">The source operation.</param>");
-        w.WriteLine("/// <param name=\"finalizerAsync\">The async action to execute unconditionally.</param>");
-        w.WriteLine("/// <returns>A task producing the original operation.</returns>");
-        w.WriteLine("public static async Task<Operation<T>> FinallyAsync<T>(this Operation<T> op, Func<Task> finalizerAsync)");
+        w.WriteLine("public static Task<Operation<T>> FinallyAsync<T>(");
+        w.WriteLine("    this Operation<T> op,");
+        w.WriteLine("    Action<T> onSuccess,");
+        w.WriteLine("    Action<Error> onFailure)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("if (finalizerAsync is null) throw new ArgumentNullException(nameof(finalizerAsync));");
+        w.WriteLine("if (onSuccess is null) throw new ArgumentNullException(nameof(onSuccess));");
+        w.WriteLine("if (onFailure is null) throw new ArgumentNullException(nameof(onFailure));");
         w.WriteLine();
-        w.WriteLine("try");
+        w.WriteLine("return op switch");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("await finalizerAsync().ConfigureAwait(false);");
+
+        w.WriteLine($"    {success} s => Task.FromResult(op.Finally(onSuccess, onFailure)),");
+        w.WriteLine($"    {failure} f => Task.FromResult(op.Finally(onSuccess, onFailure)),");
+        w.WriteLine("    _ => throw new InvalidOperationException(\"Unknown Operation state.\")");
+
+        w.Unindent();
+        w.WriteLine("};");
         w.Unindent();
         w.WriteLine("}");
-        w.WriteLine("catch");
+    }
+
+    // ---------------------------------------------------------------------
+    // FinallyAsync<T>(Task<Operation<T>>, Action<T>, Action<Error>)
+    // (canonical async shape)
+    // ---------------------------------------------------------------------
+    private static void EmitFinallyAsyncTask(CodeWriter w, OperationModel op)
+    {
+        string success = op.SuccessCaseFQN;
+        string failure = op.FailureCaseFQN;
+        string resultField = op.ResultField.Name;
+
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Asynchronously executes side-effects for both success and failure on an asynchronous operation.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("public static async Task<Operation<T>> FinallyAsync<T>(");
+        w.WriteLine("    this Task<Operation<T>> opTask,");
+        w.WriteLine("    Action<T> onSuccess,");
+        w.WriteLine("    Action<Error> onFailure)");
         w.WriteLine("{");
         w.Indent();
-        w.WriteLine("// Finalizers must not alter the operation outcome.");
-        w.WriteLine("throw;");
+        w.WriteLine("if (opTask is null) throw new ArgumentNullException(nameof(opTask));");
+        w.WriteLine("if (onSuccess is null) throw new ArgumentNullException(nameof(onSuccess));");
+        w.WriteLine("if (onFailure is null) throw new ArgumentNullException(nameof(onFailure));");
+        w.WriteLine();
+        w.WriteLine("var op = await opTask.ConfigureAwait(false);");
+        w.WriteLine();
+        w.WriteLine("switch (op)");
+        w.WriteLine("{");
+        w.Indent();
+
+        w.WriteLine($"case {success} s:");
+        w.Indent();
+        w.WriteLine($"onSuccess(s.{resultField});");
+        w.WriteLine("break;");
+        w.Unindent();
+        w.WriteLine();
+
+        w.WriteLine($"case {failure} f:");
+        w.Indent();
+        w.WriteLine("onFailure(f.Error);");
+        w.WriteLine("break;");
+        w.Unindent();
+        w.WriteLine();
+
+        w.WriteLine("default:");
+        w.Indent();
+        w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
+        w.Unindent();
+
         w.Unindent();
         w.WriteLine("}");
         w.WriteLine();

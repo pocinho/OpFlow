@@ -5,10 +5,21 @@ namespace OpFlow.Tests.Canon.Guards;
 public class RecoverTests
 {
     // -------------------------------------------------------------
-    // Recover<T>(Func<Error, T>)
+    // Recover(Func<Error, T>)
     // -------------------------------------------------------------
     [Fact]
-    public void Recover_Failure_InvokesRecoveryFunction()
+    public void Recover_Success_PassesThroughUnchanged()
+    {
+        Operation<int> op = Operation.Success(10);
+
+        Operation<int> result = op.Recover(error => -1);
+
+        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
+        Assert.Equal(10, success.Result);
+    }
+
+    [Fact]
+    public void Recover_Failure_InvokesCallback_AndReturnsSuccess()
     {
         Error.Validation error = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(error);
@@ -20,80 +31,88 @@ public class RecoverTests
     }
 
     [Fact]
-    public void Recover_Success_DoesNotInvokeRecoveryFunction()
+    public void Recover_CallbackThrows_PropagatesException()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int> op = Operation.FailureOf<int>(error);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            op.Recover(_ => throw new InvalidOperationException("boom"))
+        );
+    }
+
+    // -------------------------------------------------------------
+    // RecoverAsync(Operation<T>, Func<Error, T>)
+    // -------------------------------------------------------------
+    [Fact]
+    public async Task RecoverAsync_Operation_Success_PassesThroughUnchanged()
     {
         Operation<int> op = Operation.Success(10);
-        bool invoked = false;
 
-        Operation<int> result = op.Recover(err =>
-        {
-            invoked = true;
-            return 0;
-        });
+        Operation<int> result = await op.RecoverAsync(error => -1);
 
-        Assert.False(invoked);
         Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
         Assert.Equal(10, success.Result);
     }
 
     [Fact]
-    public void Recover_RecoveryFunctionThrows_PropagatesException()
+    public async Task RecoverAsync_Operation_Failure_InvokesCallback_AndReturnsSuccess()
     {
-        Operation<int> op = Operation.FailureOf<int>(new Error.Unexpected("boom"));
-
-        Assert.Throws<InvalidOperationException>(() =>
-            op.Recover(_ => throw new InvalidOperationException("fail"))
-        );
-    }
-
-    // -------------------------------------------------------------
-    // RecoverAsync<T>(Func<Error, Task<T>>)
-    // -------------------------------------------------------------
-    [Fact]
-    public async Task RecoverAsync_Failure_InvokesRecoveryFunction()
-    {
-        Error.NotFound error = new Error.NotFound("missing");
+        Error.Validation error = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(error);
 
-        Operation<int> result = await op.RecoverAsync(async err =>
-        {
-            await Task.Delay(1);
-            return 42;
-        });
+        Operation<int> result = await op.RecoverAsync(err => 42);
 
         Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
         Assert.Equal(42, success.Result);
     }
 
     [Fact]
-    public async Task RecoverAsync_Success_DoesNotInvokeRecoveryFunction()
+    public async Task RecoverAsync_Operation_CallbackThrows_PropagatesException()
     {
-        Operation<int> op = Operation.Success(10);
-        bool invoked = false;
+        Error.Validation error = new Error.Validation("bad");
+        Operation<int> op = Operation.FailureOf<int>(error);
 
-        Operation<int> result = await op.RecoverAsync(async err =>
-        {
-            invoked = true;
-            await Task.Delay(1);
-            return 0;
-        });
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            op.RecoverAsync(_ => throw new InvalidOperationException("boom"))
+        );
+    }
 
-        Assert.False(invoked);
+    // -------------------------------------------------------------
+    // RecoverAsync(Task<Operation<T>>, Func<Error, T>)
+    // (canonical async shape)
+    // -------------------------------------------------------------
+    [Fact]
+    public async Task RecoverAsync_Task_Success_PassesThroughUnchanged()
+    {
+        Task<Operation<int>> opTask = Task.FromResult(Operation.Success(10));
+
+        Operation<int> result = await opTask.RecoverAsync(error => -1);
+
         Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
         Assert.Equal(10, success.Result);
     }
 
     [Fact]
-    public async Task RecoverAsync_RecoveryFunctionThrows_PropagatesException()
+    public async Task RecoverAsync_Task_Failure_InvokesCallback_AndReturnsSuccess()
     {
-        Operation<int> op = Operation.FailureOf<int>(new Error.Unexpected("boom"));
+        Error.Validation error = new Error.Validation("bad");
+        Task<Operation<int>> opTask = Task.FromResult(Operation.FailureOf<int>(error));
+
+        Operation<int> result = await opTask.RecoverAsync(err => 42);
+
+        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
+        Assert.Equal(42, success.Result);
+    }
+
+    [Fact]
+    public async Task RecoverAsync_Task_CallbackThrows_PropagatesException()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Task<Operation<int>> opTask = Task.FromResult(Operation.FailureOf<int>(error));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            op.RecoverAsync(async _ =>
-            {
-                await Task.Delay(1);
-                throw new InvalidOperationException("fail");
-            })
+            opTask.RecoverAsync(_ => throw new InvalidOperationException("boom"))
         );
     }
 }

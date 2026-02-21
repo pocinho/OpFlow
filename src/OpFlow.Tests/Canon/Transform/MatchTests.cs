@@ -5,37 +5,37 @@ namespace OpFlow.Tests.Canon.Transform;
 public class MatchTests
 {
     // -------------------------------------------------------------
-    // Match<T, TResult> (functional)
+    // Match(Operation<T>, Func<T,R>, Func<Error,R>)
     // -------------------------------------------------------------
     [Fact]
-    public void Match_Functional_Success_ReturnsMappedValue()
+    public void Match_Success_InvokesOnSuccess_AndReturnsValue()
     {
         Operation<int> op = Operation.Success(10);
 
         string result = op.Match(
-            onSuccess: x => $"value:{x}",
-            onFailure: e => $"error:{e.Message}"
+            onSuccess: x => $"Value: {x}",
+            onFailure: e => $"Error: {e.Message}"
         );
 
-        Assert.Equal("value:10", result);
+        Assert.Equal("Value: 10", result);
     }
 
     [Fact]
-    public void Match_Functional_Failure_ReturnsMappedError()
+    public void Match_Failure_InvokesOnFailure_AndReturnsValue()
     {
         Error.Validation error = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(error);
 
         string result = op.Match(
-            onSuccess: x => $"value:{x}",
-            onFailure: e => $"error:{e.Message}"
+            onSuccess: x => $"Value: {x}",
+            onFailure: e => $"Error: {e.Message}"
         );
 
-        Assert.Equal("error:bad", result);
+        Assert.Equal("Error: bad", result);
     }
 
     [Fact]
-    public void Match_Functional_Throws_WhenSuccessHandlerThrows()
+    public void Match_CallbackThrows_PropagatesException()
     {
         Operation<int> op = Operation.Success(10);
 
@@ -47,152 +47,89 @@ public class MatchTests
         );
     }
 
+    // -------------------------------------------------------------
+    // MatchAsync(Operation<T>, Func<T,R>, Func<Error,R>)
+    // -------------------------------------------------------------
     [Fact]
-    public void Match_Functional_Throws_WhenFailureHandlerThrows()
+    public async Task MatchAsync_Operation_Success_InvokesOnSuccess_AndReturnsValue()
+    {
+        Operation<int> op = Operation.Success(10);
+
+        string result = await op.MatchAsync(
+            onSuccess: x => $"Value: {x}",
+            onFailure: e => $"Error: {e.Message}"
+        );
+
+        Assert.Equal("Value: 10", result);
+    }
+
+    [Fact]
+    public async Task MatchAsync_Operation_Failure_InvokesOnFailure_AndReturnsValue()
     {
         Error.Validation error = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(error);
 
-        Assert.Throws<InvalidOperationException>(() =>
-            op.Match(
-                onSuccess: _ => "ignored",
-                onFailure: _ => throw new InvalidOperationException("boom")
-            )
-        );
-    }
-
-    // -------------------------------------------------------------
-    // Match<T> (side-effect)
-    // -------------------------------------------------------------
-    [Fact]
-    public void Match_Action_Success_InvokesSuccessAction()
-    {
-        Operation<int> op = Operation.Success(10);
-        int captured = 0;
-
-        op.Match(
-            onSuccess: x => captured = x,
-            onFailure: _ => { }
+        string result = await op.MatchAsync(
+            onSuccess: x => $"Value: {x}",
+            onFailure: e => $"Error: {e.Message}"
         );
 
-        Assert.Equal(10, captured);
+        Assert.Equal("Error: bad", result);
     }
 
     [Fact]
-    public void Match_Action_Failure_InvokesFailureAction()
-    {
-        Error.Validation error = new Error.Validation("bad");
-        Operation<int> op = Operation.FailureOf<int>(error);
-
-        Error? captured = null;
-
-        op.Match(
-            onSuccess: _ => { },
-            onFailure: e => captured = e
-        );
-
-        Assert.Equal(error, captured);
-    }
-
-    [Fact]
-    public void Match_Action_Throws_WhenSuccessActionThrows()
+    public async Task MatchAsync_Operation_CallbackThrows_PropagatesException()
     {
         Operation<int> op = Operation.Success(10);
 
-        Assert.Throws<InvalidOperationException>(() =>
-            op.Match(
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            op.MatchAsync(
                 onSuccess: _ => throw new InvalidOperationException("boom"),
-                onFailure: _ => { }
-            )
-        );
-    }
-
-    [Fact]
-    public void Match_Action_Throws_WhenFailureActionThrows()
-    {
-        Error.Validation error = new Error.Validation("bad");
-        Operation<int> op = Operation.FailureOf<int>(error);
-
-        Assert.Throws<InvalidOperationException>(() =>
-            op.Match(
-                onSuccess: _ => { },
-                onFailure: _ => throw new InvalidOperationException("boom")
+                onFailure: _ => "ignored"
             )
         );
     }
 
     // -------------------------------------------------------------
-    // MatchAsync<T> (side-effect async)
+    // MatchAsync(Task<Operation<T>>, Func<T,R>, Func<Error,R>)
+    // (canonical async shape)
     // -------------------------------------------------------------
     [Fact]
-    public async Task MatchAsync_Action_Success_InvokesSuccessAction()
+    public async Task MatchAsync_Task_Success_InvokesOnSuccess_AndReturnsValue()
     {
-        Operation<int> op = Operation.Success(10);
-        int captured = 0;
+        Task<Operation<int>> opTask = Task.FromResult(Operation.Success(10));
 
-        await op.MatchAsync(
-            onSuccessAsync: async x =>
-            {
-                await Task.Delay(1);
-                captured = x;
-            },
-            onFailureAsync: _ => Task.CompletedTask
+        string result = await opTask.MatchAsync(
+            onSuccess: x => $"Value: {x}",
+            onFailure: e => $"Error: {e.Message}"
         );
 
-        Assert.Equal(10, captured);
+        Assert.Equal("Value: 10", result);
     }
 
     [Fact]
-    public async Task MatchAsync_Action_Failure_InvokesFailureAction()
+    public async Task MatchAsync_Task_Failure_InvokesOnFailure_AndReturnsValue()
     {
         Error.Validation error = new Error.Validation("bad");
-        Operation<int> op = Operation.FailureOf<int>(error);
+        Task<Operation<int>> opTask = Task.FromResult(Operation.FailureOf<int>(error));
 
-        Error? captured = null;
-
-        await op.MatchAsync(
-            onSuccessAsync: _ => Task.CompletedTask,
-            onFailureAsync: async e =>
-            {
-                await Task.Delay(1);
-                captured = e;
-            }
+        string result = await opTask.MatchAsync(
+            onSuccess: x => $"Value: {x}",
+            onFailure: e => $"Error: {e.Message}"
         );
 
-        Assert.Equal(error, captured);
+        Assert.Equal("Error: bad", result);
     }
 
     [Fact]
-    public async Task MatchAsync_Action_Throws_WhenSuccessActionThrows()
+    public async Task MatchAsync_Task_CallbackThrows_PropagatesException()
     {
-        Operation<int> op = Operation.Success(10);
+        Task<Operation<int>> opTask = Task.FromResult(Operation.Success(10));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            op.MatchAsync(
-                onSuccessAsync: async _ =>
-                {
-                    await Task.Delay(1);
-                    throw new InvalidOperationException("boom");
-                },
-                onFailureAsync: _ => Task.CompletedTask
-            )
-        );
-    }
-
-    [Fact]
-    public async Task MatchAsync_Action_Throws_WhenFailureActionThrows()
-    {
-        Error.Validation error = new Error.Validation("bad");
-        Operation<int> op = Operation.FailureOf<int>(error);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            op.MatchAsync(
-                onSuccessAsync: _ => Task.CompletedTask,
-                onFailureAsync: async _ =>
-                {
-                    await Task.Delay(1);
-                    throw new InvalidOperationException("boom");
-                }
+            opTask.MatchAsync(
+                onSuccess: _ => throw new InvalidOperationException("boom"),
+                onFailure: _ => "ignored"
             )
         );
     }

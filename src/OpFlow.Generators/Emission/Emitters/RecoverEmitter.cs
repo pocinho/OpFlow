@@ -40,74 +40,34 @@ internal sealed class RecoverEmitter : IOperationEmitter
         w.WriteLine("{");
         w.Indent();
 
-        EmitRecoverValue(w, op);
+        EmitRecover(w, op);
         w.WriteLine();
-
-        EmitRecoverAsyncValue(w, op);
+        EmitRecoverAsync(w, op);
+        w.WriteLine();
+        EmitRecoverAsyncTask(w, op);
 
         w.Unindent();
         w.WriteLine("}");
     }
 
     // ---------------------------------------------------------------------
-    // Recover<T>(Func<Error, T>)
+    // Recover<T>(Operation<T>, Func<Error, T>)
     // ---------------------------------------------------------------------
-    private static void EmitRecoverValue(CodeWriter w, OperationModel op)
+    private static void EmitRecover(CodeWriter w, OperationModel op)
     {
         string success = op.SuccessCaseFQN;
         string failure = op.FailureCaseFQN;
+        string resultField = op.ResultField.Name;
+        string errorField = op.ErrorField.Name;
 
         w.WriteLine("/// <summary>");
-        w.WriteLine("/// Recovers from a failed operation by converting the error into a successful value.");
+        w.WriteLine("/// Recovers from a failed operation by producing a fallback value.");
         w.WriteLine("/// </summary>");
-        w.WriteLine("public static Operation<T> Recover<T>(");
-        w.Indent();
-        w.WriteLine("this Operation<T> op,");
-        w.WriteLine("Func<Error, T> recover)");
-        w.Unindent();
+        w.WriteLine("public static Operation<T> Recover<T>(this Operation<T> op, Func<Error, T> recover)");
         w.WriteLine("{");
         w.Indent();
-
         w.WriteLine("if (recover is null) throw new ArgumentNullException(nameof(recover));");
         w.WriteLine();
-
-        w.WriteLine("return op switch");
-        w.WriteLine("{");
-        w.Indent();
-
-        w.WriteLine($"{success} s => s,");
-        w.WriteLine($"{failure} f => new Operation<T>.Success(recover(f.Error)),");
-        w.WriteLine("_ => throw new InvalidOperationException()");
-
-        w.Unindent();
-        w.WriteLine("};");
-
-        w.Unindent();
-        w.WriteLine("}");
-    }
-
-    // ---------------------------------------------------------------------
-    // RecoverAsync<T>(Func<Error, Task<T>>)
-    // ---------------------------------------------------------------------
-    private static void EmitRecoverAsyncValue(CodeWriter w, OperationModel op)
-    {
-        string success = op.SuccessCaseFQN;
-        string failure = op.FailureCaseFQN;
-
-        w.WriteLine("/// <summary>");
-        w.WriteLine("/// Asynchronously recovers from a failed operation by converting the error into a successful value.");
-        w.WriteLine("/// </summary>");
-        w.WriteLine("public static async Task<Operation<T>> RecoverAsync<T>(");
-        w.Indent();
-        w.WriteLine("this Operation<T> op,");
-        w.WriteLine("Func<Error, Task<T>> recoverAsync)");
-        w.Unindent();
-        w.WriteLine("{");
-        w.Indent();
-
-        w.WriteLine("if (recoverAsync is null) throw new ArgumentNullException(nameof(recoverAsync));");
-        w.WriteLine();
-
         w.WriteLine("switch (op)");
         w.WriteLine("{");
         w.Indent();
@@ -116,20 +76,100 @@ internal sealed class RecoverEmitter : IOperationEmitter
         w.Indent();
         w.WriteLine("return s;");
         w.Unindent();
+        w.WriteLine();
 
         w.WriteLine($"case {failure} f:");
         w.Indent();
-        w.WriteLine("return new Operation<T>.Success(await recoverAsync(f.Error).ConfigureAwait(false));");
+        w.WriteLine("var value = recover(f.Error);");
+        w.WriteLine("return Operation.Success(value);");
         w.Unindent();
+        w.WriteLine();
 
         w.WriteLine("default:");
         w.Indent();
-        w.WriteLine("throw new InvalidOperationException();");
+        w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
         w.Unindent();
 
         w.Unindent();
         w.WriteLine("}");
+        w.Unindent();
+        w.WriteLine("}");
+    }
 
+    // ---------------------------------------------------------------------
+    // RecoverAsync<T>(Operation<T>, Func<Error, T>)
+    // ---------------------------------------------------------------------
+    private static void EmitRecoverAsync(CodeWriter w, OperationModel op)
+    {
+        string success = op.SuccessCaseFQN;
+        string failure = op.FailureCaseFQN;
+
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Asynchronously recovers from a failed operation by producing a fallback value.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("public static Task<Operation<T>> RecoverAsync<T>(this Operation<T> op, Func<Error, T> recover)");
+        w.WriteLine("{");
+        w.Indent();
+        w.WriteLine("if (recover is null) throw new ArgumentNullException(nameof(recover));");
+        w.WriteLine();
+        w.WriteLine("return op switch");
+        w.WriteLine("{");
+        w.Indent();
+
+        w.WriteLine($"    {success} s => Task.FromResult<Operation<T>>(s),");
+        w.WriteLine($"    {failure} f => Task.FromResult<Operation<T>>(Operation.Success(recover(f.Error))),");
+        w.WriteLine("    _ => throw new InvalidOperationException(\"Unknown Operation state.\")");
+
+        w.Unindent();
+        w.WriteLine("};");
+        w.Unindent();
+        w.WriteLine("}");
+    }
+
+    // ---------------------------------------------------------------------
+    // RecoverAsync<T>(Task<Operation<T>>, Func<Error, T>)
+    // (canonical async shape)
+    // ---------------------------------------------------------------------
+    private static void EmitRecoverAsyncTask(CodeWriter w, OperationModel op)
+    {
+        string success = op.SuccessCaseFQN;
+        string failure = op.FailureCaseFQN;
+
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Asynchronously recovers from a failed asynchronous operation by producing a fallback value.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("public static async Task<Operation<T>> RecoverAsync<T>(this Task<Operation<T>> opTask, Func<Error, T> recover)");
+        w.WriteLine("{");
+        w.Indent();
+        w.WriteLine("if (opTask is null) throw new ArgumentNullException(nameof(opTask));");
+        w.WriteLine("if (recover is null) throw new ArgumentNullException(nameof(recover));");
+        w.WriteLine();
+        w.WriteLine("var op = await opTask.ConfigureAwait(false);");
+        w.WriteLine();
+        w.WriteLine("switch (op)");
+        w.WriteLine("{");
+        w.Indent();
+
+        w.WriteLine($"case {success} s:");
+        w.Indent();
+        w.WriteLine("return s;");
+        w.Unindent();
+        w.WriteLine();
+
+        w.WriteLine($"case {failure} f:");
+        w.Indent();
+        w.WriteLine("var value = recover(f.Error);");
+        w.WriteLine("return Operation.Success(value);");
+        w.Unindent();
+        w.WriteLine();
+
+        w.WriteLine("default:");
+        w.Indent();
+        w.WriteLine("throw new InvalidOperationException(\"Unknown Operation state.\");");
+        w.Unindent();
+
+        w.Unindent();
+        w.WriteLine("}");
         w.Unindent();
         w.WriteLine("}");
     }

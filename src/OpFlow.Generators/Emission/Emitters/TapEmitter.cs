@@ -43,6 +43,9 @@ internal sealed class TapEmitter : IOperationEmitter
         EmitTap(w, op);
         w.WriteLine();
         EmitTapAsync(w, op);
+        w.WriteLine();
+        EmitTapAsyncTask(w, op);
+
 
         w.Unindent();
         w.WriteLine("}");
@@ -114,6 +117,45 @@ internal sealed class TapEmitter : IOperationEmitter
         w.WriteLine($"case {success} s:");
         w.Indent();
         w.WriteLine($"await actionAsync(s.{resultField}).ConfigureAwait(false);");
+        w.WriteLine("break;");
+        w.Unindent();
+        w.WriteLine("default:");
+        w.Indent();
+        w.WriteLine("break;");
+        w.Unindent();
+        w.Unindent();
+        w.WriteLine("}");
+        w.WriteLine();
+        w.WriteLine("return op;");
+        w.Unindent();
+        w.WriteLine("}");
+    }
+
+    // ---------------------------------------------------------------------
+    // TapAsync<T>(Task<Operation<T>>, Action<T>)
+    // ---------------------------------------------------------------------
+    private static void EmitTapAsyncTask(CodeWriter w, OperationModel op)
+    {
+        string success = op.SuccessCaseFQN;
+        string resultField = op.ResultField.Name;
+
+        w.WriteLine("/// <summary>");
+        w.WriteLine("/// Observes the successful result of an asynchronous operation without altering it.");
+        w.WriteLine("/// </summary>");
+        w.WriteLine("public static async Task<Operation<T>> TapAsync<T>(this Task<Operation<T>> opTask, Action<T> action)");
+        w.WriteLine("{");
+        w.Indent();
+        w.WriteLine("if (opTask is null) throw new ArgumentNullException(nameof(opTask));");
+        w.WriteLine("if (action is null) throw new ArgumentNullException(nameof(action));");
+        w.WriteLine();
+        w.WriteLine("var op = await opTask.ConfigureAwait(false);");
+        w.WriteLine();
+        w.WriteLine("switch (op)");
+        w.WriteLine("{");
+        w.Indent();
+        w.WriteLine($"case {success} s:");
+        w.Indent();
+        w.WriteLine($"action(s.{resultField});");
         w.WriteLine("break;");
         w.Unindent();
         w.WriteLine("default:");

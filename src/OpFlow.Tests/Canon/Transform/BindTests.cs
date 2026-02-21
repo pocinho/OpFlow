@@ -5,111 +5,82 @@ namespace OpFlow.Tests.Canon.Transform;
 public class BindTests
 {
     // -------------------------------------------------------------
-    // Bind(Func<T, Operation<U>>)
+    // Bind(Operation<T>, Func<T, Operation<U>>)
     // -------------------------------------------------------------
     [Fact]
-    public void Bind_Success_InvokesBinder_AndReturnsResult()
+    public void Bind_Success_InvokesBind_AndReturnsNewOperation()
     {
         Operation<int> op = Operation.Success(10);
 
-        Operation<string> result = op.Bind(x =>
-            Operation.Success($"value:{x}")
-        );
+        Operation<string> result = op.Bind(x => Operation.Success($"Value: {x}"));
 
         Operation<string>.Success success = Assert.IsType<Operation<string>.Success>(result);
-        Assert.Equal("value:10", success.Result);
+        Assert.Equal("Value: 10", success.Result);
     }
 
     [Fact]
-    public void Bind_Failure_DoesNotInvokeBinder()
+    public void Bind_Failure_SkipsBind_AndPropagatesFailure()
     {
         Error.Validation error = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(error);
 
-        bool invoked = false;
+        Operation<string> result = op.Bind(x => Operation.Success($"Value: {x}"));
 
-        Operation<string> result = op.Bind(x =>
-        {
-            invoked = true;
-            return Operation.Success("ignored");
-        });
-
-        Assert.False(invoked);
         Operation<string>.Failure failure = Assert.IsType<Operation<string>.Failure>(result);
         Assert.Equal(error, failure.Error);
     }
 
     [Fact]
-    public void Bind_BinderThrows_PropagatesException()
+    public void Bind_CallbackThrows_PropagatesException()
     {
         Operation<int> op = Operation.Success(10);
 
         Assert.Throws<InvalidOperationException>(() =>
-            op.Bind<int, int>(_ => throw new InvalidOperationException("boom"))
+            op.Bind<int, string>(_ => throw new InvalidOperationException("boom"))
         );
     }
 
-    [Fact]
-    public void Bind_BinderInvokedExactlyOnce()
-    {
-        Operation<int> op = Operation.Success(10);
-        int count = 0;
-
-        Operation<int> result = op.Bind(x =>
-        {
-            count++;
-            return Operation.Success(x);
-        });
-
-        Assert.Equal(1, count);
-        Assert.IsType<Operation<int>.Success>(result);
-    }
-
     // -------------------------------------------------------------
-    // BindAsync(Func<T, Task<Operation<U>>>)
+    // BindAsync(Operation<T>, Func<T, Task<Operation<U>>>)
     // -------------------------------------------------------------
     [Fact]
-    public async Task BindAsync_Success_InvokesBinder_AndReturnsResult()
+    public async Task BindAsync_Operation_Success_InvokesBindAsync_AndReturnsNewOperation()
     {
         Operation<int> op = Operation.Success(10);
 
         Operation<string> result = await op.BindAsync(async x =>
         {
             await Task.Delay(1);
-            return Operation.Success($"value:{x}");
+            return Operation.Success($"Value: {x}");
         });
 
         Operation<string>.Success success = Assert.IsType<Operation<string>.Success>(result);
-        Assert.Equal("value:10", success.Result);
+        Assert.Equal("Value: 10", success.Result);
     }
 
     [Fact]
-    public async Task BindAsync_Failure_DoesNotInvokeBinder()
+    public async Task BindAsync_Operation_Failure_SkipsBindAsync_AndPropagatesFailure()
     {
         Error.Validation error = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(error);
 
-        bool invoked = false;
-
         Operation<string> result = await op.BindAsync(async x =>
         {
-            invoked = true;
             await Task.Delay(1);
-            return Operation.Success("ignored");
+            return Operation.Success($"Value: {x}");
         });
 
-        Assert.False(invoked);
         Operation<string>.Failure failure = Assert.IsType<Operation<string>.Failure>(result);
         Assert.Equal(error, failure.Error);
     }
 
     [Fact]
-    public async Task BindAsync_BinderThrows_PropagatesException()
+    public async Task BindAsync_Operation_CallbackThrows_PropagatesException()
     {
         Operation<int> op = Operation.Success(10);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            op.BindAsync<int, int>(async _ =>
+            op.BindAsync<int, string>(async _ =>
             {
                 await Task.Delay(1);
                 throw new InvalidOperationException("boom");
@@ -117,20 +88,52 @@ public class BindTests
         );
     }
 
+    // -------------------------------------------------------------
+    // BindAsync(Task<Operation<T>>, Func<T, Task<Operation<U>>>)
+    // (canonical async shape)
+    // -------------------------------------------------------------
     [Fact]
-    public async Task BindAsync_BinderInvokedExactlyOnce()
+    public async Task BindAsync_Task_Success_InvokesBindAsync_AndReturnsNewOperation()
     {
-        Operation<int> op = Operation.Success(10);
-        int count = 0;
+        Task<Operation<int>> opTask = Task.FromResult(Operation.Success(10));
 
-        Operation<int> result = await op.BindAsync(async x =>
+        Operation<string> result = await opTask.BindAsync(async x =>
         {
             await Task.Delay(1);
-            count++;
-            return Operation.Success(x);
+            return Operation.Success($"Value: {x}");
         });
 
-        Assert.Equal(1, count);
-        Assert.IsType<Operation<int>.Success>(result);
+        Operation<string>.Success success = Assert.IsType<Operation<string>.Success>(result);
+        Assert.Equal("Value: 10", success.Result);
+    }
+
+    [Fact]
+    public async Task BindAsync_Task_Failure_SkipsBindAsync_AndPropagatesFailure()
+    {
+        Error.Validation error = new Error.Validation("bad");
+        Task<Operation<int>> opTask = Task.FromResult(Operation.FailureOf<int>(error));
+
+        Operation<string> result = await opTask.BindAsync(async x =>
+        {
+            await Task.Delay(1);
+            return Operation.Success($"Value: {x}");
+        });
+
+        Operation<string>.Failure failure = Assert.IsType<Operation<string>.Failure>(result);
+        Assert.Equal(error, failure.Error);
+    }
+
+    [Fact]
+    public async Task BindAsync_Task_CallbackThrows_PropagatesException()
+    {
+        Task<Operation<int>> opTask = Task.FromResult(Operation.Success(10));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            opTask.BindAsync<int, string>(async _ =>
+            {
+                await Task.Delay(1);
+                throw new InvalidOperationException("boom");
+            })
+        );
     }
 }

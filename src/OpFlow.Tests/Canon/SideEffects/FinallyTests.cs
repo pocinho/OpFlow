@@ -5,156 +5,171 @@ namespace OpFlow.Tests.Canon.SideEffects;
 public class FinallyTests
 {
     // -------------------------------------------------------------
-    // Finally(Action)
+    // Finally(Operation<T>, Action<T>, Action<Error>)
     // -------------------------------------------------------------
     [Fact]
-    public void Finally_Success_InvokesAction_AndReturnsSameSuccess()
+    public void Finally_Success_InvokesOnSuccess_AndReturnsSameSuccess()
     {
         Operation<int> op = Operation.Success(10);
-        bool invoked = false;
+        int? captured = null;
+        bool failureCalled = false;
 
-        Operation<int> result = op.Finally(() => invoked = true);
+        Operation<int> result = op.Finally(
+            onSuccess: x => captured = x,
+            onFailure: _ => failureCalled = true
+        );
 
-        Assert.True(invoked);
+        Assert.Equal(10, captured);
+        Assert.False(failureCalled);
+
         Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
         Assert.Equal(10, success.Result);
     }
 
     [Fact]
-    public void Finally_Failure_InvokesAction_AndReturnsSameFailure()
+    public void Finally_Failure_InvokesOnFailure_AndReturnsSameFailure()
     {
         Error.Validation error = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(error);
-        bool invoked = false;
 
-        Operation<int> result = op.Finally(() => invoked = true);
+        bool successCalled = false;
+        Error? captured = null;
 
-        Assert.True(invoked);
+        Operation<int> result = op.Finally(
+            onSuccess: _ => successCalled = true,
+            onFailure: e => captured = e
+        );
+
+        Assert.False(successCalled);
+        Assert.Equal(error, captured);
+
         Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
         Assert.Equal(error, failure.Error);
     }
 
     [Fact]
-    public void Finally_ActionThrows_PropagatesException_AndDoesNotChangeResult()
+    public void Finally_CallbackThrows_PropagatesException()
     {
         Operation<int> op = Operation.Success(10);
 
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            op.Finally(() => throw new InvalidOperationException("boom"))
+        Assert.Throws<InvalidOperationException>(() =>
+            op.Finally(
+                onSuccess: _ => throw new InvalidOperationException("boom"),
+                onFailure: _ => { }
+            )
+        );
+    }
+
+    // -------------------------------------------------------------
+    // FinallyAsync(Operation<T>, Action<T>, Action<Error>)
+    // -------------------------------------------------------------
+    [Fact]
+    public async Task FinallyAsync_Operation_Success_InvokesOnSuccess_AndReturnsSameSuccess()
+    {
+        Operation<int> op = Operation.Success(10);
+        int? captured = null;
+        bool failureCalled = false;
+
+        Operation<int> result = await op.FinallyAsync(
+            onSuccess: x => captured = x,
+            onFailure: _ => failureCalled = true
         );
 
-        Assert.Equal("boom", ex.Message);
-    }
+        Assert.Equal(10, captured);
+        Assert.False(failureCalled);
 
-    [Fact]
-    public void Finally_ActionInvokedExactlyOnce_ForSuccess()
-    {
-        Operation<int> op = Operation.Success(10);
-        int count = 0;
-
-        Operation<int> result = op.Finally(() => count++);
-
-        Assert.Equal(1, count);
-        Assert.IsType<Operation<int>.Success>(result);
-    }
-
-    [Fact]
-    public void Finally_ActionInvokedExactlyOnce_ForFailure()
-    {
-        Error.NotFound error = new Error.NotFound("missing");
-        Operation<int> op = Operation.FailureOf<int>(error);
-        int count = 0;
-
-        Operation<int> result = op.Finally(() => count++);
-
-        Assert.Equal(1, count);
-        Assert.IsType<Operation<int>.Failure>(result);
-    }
-
-    // -------------------------------------------------------------
-    // FinallyAsync(Func<Task>)
-    // -------------------------------------------------------------
-    [Fact]
-    public async Task FinallyAsync_Success_InvokesAction_AndReturnsSameSuccess()
-    {
-        Operation<int> op = Operation.Success(10);
-        bool invoked = false;
-
-        Operation<int> result = await op.FinallyAsync(async () =>
-        {
-            await Task.Delay(1);
-            invoked = true;
-        });
-
-        Assert.True(invoked);
         Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
         Assert.Equal(10, success.Result);
     }
 
     [Fact]
-    public async Task FinallyAsync_Failure_InvokesAction_AndReturnsSameFailure()
+    public async Task FinallyAsync_Operation_Failure_InvokesOnFailure_AndReturnsSameFailure()
     {
         Error.Validation error = new Error.Validation("bad");
         Operation<int> op = Operation.FailureOf<int>(error);
-        bool invoked = false;
 
-        Operation<int> result = await op.FinallyAsync(async () =>
-        {
-            await Task.Delay(1);
-            invoked = true;
-        });
+        bool successCalled = false;
+        Error? captured = null;
 
-        Assert.True(invoked);
+        Operation<int> result = await op.FinallyAsync(
+            onSuccess: _ => successCalled = true,
+            onFailure: e => captured = e
+        );
+
+        Assert.False(successCalled);
+        Assert.Equal(error, captured);
+
         Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
         Assert.Equal(error, failure.Error);
     }
 
     [Fact]
-    public async Task FinallyAsync_ActionThrows_PropagatesException_AndDoesNotChangeResult()
+    public async Task FinallyAsync_Operation_CallbackThrows_PropagatesException()
     {
         Operation<int> op = Operation.Success(10);
 
-        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            op.FinallyAsync(async () =>
-            {
-                await Task.Delay(1);
-                throw new InvalidOperationException("boom");
-            })
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            op.FinallyAsync(
+                onSuccess: _ => throw new InvalidOperationException("boom"),
+                onFailure: _ => { }
+            )
+        );
+    }
+
+    // -------------------------------------------------------------
+    // FinallyAsync(Task<Operation<T>>, Action<T>, Action<Error>)
+    // (canonical async shape)
+    // -------------------------------------------------------------
+    [Fact]
+    public async Task FinallyAsync_Task_Success_InvokesOnSuccess_AndReturnsSameSuccess()
+    {
+        Task<Operation<int>> opTask = Task.FromResult(Operation.Success(10));
+        int? captured = null;
+        bool failureCalled = false;
+
+        Operation<int> result = await opTask.FinallyAsync(
+            onSuccess: x => captured = x,
+            onFailure: _ => failureCalled = true
         );
 
-        Assert.Equal("boom", ex.Message);
+        Assert.Equal(10, captured);
+        Assert.False(failureCalled);
+
+        Operation<int>.Success success = Assert.IsType<Operation<int>.Success>(result);
+        Assert.Equal(10, success.Result);
     }
 
     [Fact]
-    public async Task FinallyAsync_ActionInvokedExactlyOnce_ForSuccess()
+    public async Task FinallyAsync_Task_Failure_InvokesOnFailure_AndReturnsSameFailure()
     {
-        Operation<int> op = Operation.Success(10);
-        int count = 0;
+        Error.Validation error = new Error.Validation("bad");
+        Task<Operation<int>> opTask = Task.FromResult(Operation.FailureOf<int>(error));
 
-        Operation<int> result = await op.FinallyAsync(async () =>
-        {
-            await Task.Delay(1);
-            count++;
-        });
+        bool successCalled = false;
+        Error? captured = null;
 
-        Assert.Equal(1, count);
-        Assert.IsType<Operation<int>.Success>(result);
+        Operation<int> result = await opTask.FinallyAsync(
+            onSuccess: _ => successCalled = true,
+            onFailure: e => captured = e
+        );
+
+        Assert.False(successCalled);
+        Assert.Equal(error, captured);
+
+        Operation<int>.Failure failure = Assert.IsType<Operation<int>.Failure>(result);
+        Assert.Equal(error, failure.Error);
     }
 
     [Fact]
-    public async Task FinallyAsync_ActionInvokedExactlyOnce_ForFailure()
+    public async Task FinallyAsync_Task_CallbackThrows_PropagatesException()
     {
-        Error.NotFound error = new Error.NotFound("missing");
-        Operation<int> op = Operation.FailureOf<int>(error);
-        int count = 0;
+        Task<Operation<int>> opTask = Task.FromResult(Operation.Success(10));
 
-        Operation<int> result = await op.FinallyAsync(async () =>
-        {
-            await Task.Delay(1);
-            count++;
-        });
-
-        Assert.Equal(1, count);
-        Assert.IsType<Operation<int>.Failure>(result);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            opTask.FinallyAsync(
+                onSuccess: _ => throw new InvalidOperationException("boom"),
+                onFailure: _ => { }
+            )
+        );
     }
 }
